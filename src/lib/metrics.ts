@@ -66,6 +66,8 @@ function derive(base: {
   const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
   return {
     ...base,
+    // A conversation is always with a lead, so never report more conversations than leads.
+    conversations: Math.min(base.conversations, base.leads),
     costPerLead: ratio(base.spend, base.leads),
     costPerAppointment: ratio(base.spend, base.appointments),
     salesConversion: ratio(base.sales, base.leads),
@@ -235,7 +237,8 @@ function demoDay(client: Client, date: string): DemoDay {
   // cost per appointment lands around $550–$700.
   const sampleSpend = Math.round(Math.max(leads, 1) * (90 + spendNoise * 20));
   const spend = client.spend.length > 0 ? dailySpend(client, date) : sampleSpend;
-  const conversations = leads + binomial(leads, 0.65, rand);
+  // About 70% of new leads reply and start a conversation.
+  const conversations = binomial(leads, 0.7, rand);
   const appointments = binomial(leads, 0.16, rand);
   const applicants = binomial(appointments, 0.52, rand);
   const sales = binomial(applicants, 0.45, rand);

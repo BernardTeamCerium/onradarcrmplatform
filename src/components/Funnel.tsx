@@ -4,6 +4,7 @@ import type { Metrics } from "@/lib/types";
 export function Funnel({ metrics }: { metrics: Metrics }) {
   const steps = [
     { name: "Leads", value: metrics.leads },
+    { name: "Conversations", value: metrics.conversations },
     { name: "Connected appts", value: metrics.appointments },
     { name: "Applications", value: metrics.applicants },
     { name: "Sales", value: metrics.sales },
