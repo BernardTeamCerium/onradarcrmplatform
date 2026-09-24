@@ -4,7 +4,7 @@ A branded, login-protected dashboard that pulls each client's numbers from **GoH
 
 | Metric | Where it comes from |
 |---|---|
-| **Ad spend** | Entered monthly by an OnRadar admin (Client settings → Ad spend) and spread evenly across the month's days |
+| **Marketing spend** | Entered monthly by an OnRadar admin (Client settings → Marketing spend) and spread evenly across the month's days |
 | **Leads** | GoHighLevel contacts created in the period (`POST /contacts/search`) |
 | **Conversations** | GoHighLevel conversations started in the period (`GET /conversations/search`) |
 | **Connected appointments** | Events on every calendar in the sub-account, excluding cancelled, no-show and invalid (`GET /calendars/events`) |
@@ -21,7 +21,7 @@ Every metric is compared with the previous period of the same length. Date range
 
 ## Two dashboards
 
-- **Admin** (`/admin`): every client in one table with rolled-up totals. From there an admin can open any client's dashboard (exactly what the client sees), manage their logo and brand color, connect GoHighLevel, enter ad spend, and create client logins.
+- **Admin** (`/admin`): every client in one table with rolled-up totals. From there an admin can open any client's dashboard (exactly what the client sees), manage their logo and brand color, connect GoHighLevel, enter marketing spend, and create client logins.
 - **Client** (`/dashboard`): a client only ever sees their own company, branded with their logo.
 
 **Sibley Financial Group** is already set up with its crest logo (from sfg.onradarcrm.com) and a client login.

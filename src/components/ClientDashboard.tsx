@@ -106,7 +106,7 @@ export async function ClientDashboard({
           <Funnel metrics={data.metrics} />
           <div style={{ borderTop: "1px solid var(--grid)", marginTop: 20, paddingTop: 16 }} className="row">
             <div style={{ flex: 1 }}>
-              <div className="muted small">Spend</div>
+              <div className="muted small">Marketing spend</div>
               <div style={{ fontSize: 20, fontWeight: 650 }}>{money(data.metrics.spend)}</div>
             </div>
             <div style={{ flex: 1 }}>
@@ -119,7 +119,7 @@ export async function ClientDashboard({
 
       <p className="muted small">
         {data.source === "ghl" ? "Live from OnRadar CRM" : "Sample data shown until your OnRadar CRM account is connected"} ·
-        updated {new Date(data.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}. Ad spend is
+        updated {new Date(data.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}. Marketing spend is
         entered by your OnRadar account manager. Submitted premium is the value of applications submitted in your CRM
         {client.averagePremium > 0 ? `, or ${money(client.averagePremium)} per application when none is recorded` : ""}.
       </p>

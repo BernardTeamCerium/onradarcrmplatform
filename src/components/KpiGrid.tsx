@@ -15,13 +15,13 @@ interface KpiDef {
 
 const KPIS: KpiDef[] = [
   { key: "premium", label: "Submitted premium", kind: "money", upIsGood: true, hero: true, formula: "Premium on submitted applications" },
-  { key: "estimatedReturn", label: "Estimated return", kind: "percent", upIsGood: true, hero: true, formula: "(Premium − Spend) ÷ Spend" },
-  { key: "spend", label: "Ad spend", kind: "money", upIsGood: false },
+  { key: "estimatedReturn", label: "Estimated return", kind: "percent", upIsGood: true, hero: true, formula: "(Premium − Marketing spend) ÷ Marketing spend" },
+  { key: "spend", label: "Marketing spend", kind: "money", upIsGood: false },
   { key: "leads", label: "Leads", kind: "count", upIsGood: true, formula: "New contacts" },
-  { key: "costPerLead", label: "Cost per lead", kind: "money2", upIsGood: false, formula: "Spend ÷ Leads" },
+  { key: "costPerLead", label: "Cost per lead", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Leads" },
   { key: "conversations", label: "Conversations", kind: "count", upIsGood: true, formula: "New conversations" },
   { key: "appointments", label: "Connected appointments", kind: "count", upIsGood: true, formula: "Held, not cancelled or no-show" },
-  { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Spend ÷ Appointments" },
+  { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Appointments" },
   { key: "applicants", label: "Applications submitted", kind: "count", upIsGood: true, formula: "Reached application stage" },
   { key: "salesConversion", label: "Sales conversion", kind: "percent", upIsGood: true, formula: "Sales ÷ Leads" },
 ];

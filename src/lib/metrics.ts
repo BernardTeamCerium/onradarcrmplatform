@@ -43,7 +43,7 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
 // ---------------------------------------------------------------------------
 // Spend
 
-/** Ad spend per day, prorating each month's entry evenly across that month's days. */
+/** Marketing spend per day, prorating each month's entry evenly across that month's days. */
 export function dailySpend(client: Client, day: string) {
   const month = day.slice(0, 7);
   const [y, m] = month.split("-").map(Number);

@@ -45,7 +45,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
         <section className="kpi-grid five" aria-label="All-client totals">
           <div className="kpi"><div className="label">Clients</div><div className="value">{rows.length}</div></div>
-          <div className="kpi"><div className="label">Total ad spend</div><div className="value">{money(totals.spend)}</div></div>
+          <div className="kpi"><div className="label">Total marketing spend</div><div className="value">{money(totals.spend)}</div></div>
           <div className="kpi"><div className="label">Total leads</div><div className="value">{count(totals.leads)}</div></div>
           <div className="kpi"><div className="label">Connected appointments</div><div className="value">{count(totals.appointments)}</div></div>
           <div className="kpi"><div className="label">Submitted premium</div><div className="value">{money(totals.premium)}</div></div>
@@ -58,7 +58,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                 <tr>
                   <th>Client</th>
                   <th>Data</th>
-                  <th className="num">Spend</th>
+                  <th className="num">Marketing spend</th>
                   <th className="num">Leads</th>
                   <th className="num">CPL</th>
                   <th className="num">Appts</th>

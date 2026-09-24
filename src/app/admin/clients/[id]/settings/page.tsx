@@ -144,12 +144,12 @@ export default async function ClientSettings({
           </form>
         </section>
 
-        {/* Spend */}
+        {/* Marketing spend */}
         <section className="card">
           <div className="card-head">
             <div>
-              <h2>Ad spend</h2>
-              <p className="muted small">Monthly spend drives cost per lead, cost per appointment and estimated return. Each month is spread evenly across its days.</p>
+              <h2>Marketing spend</h2>
+              <p className="muted small">Monthly marketing spend drives cost per lead, cost per appointment and estimated return. Each month is spread evenly across its days.</p>
             </div>
           </div>
           <form action={addSpend} className="form-grid" style={{ alignItems: "end" }}>
@@ -157,7 +157,7 @@ export default async function ClientSettings({
             <label className="field">Month<input name="month" type="month" defaultValue={thisMonth} required /></label>
             <label className="field">Amount ($)<input name="amount" type="number" min="0" step="0.01" required /></label>
             <label className="field">Note<input name="note" placeholder="Facebook + Google" /></label>
-            <div><button className="btn primary" type="submit">Add spend</button></div>
+            <div><button className="btn primary" type="submit">Add marketing spend</button></div>
           </form>
           {client.spend.length > 0 ? (
             <div className="table-wrap" style={{ marginTop: 16 }}>
@@ -183,7 +183,7 @@ export default async function ClientSettings({
             </div>
           ) : (
             <p className="muted small" style={{ marginTop: 12 }}>
-              No spend entered yet.{client.demoMode ? " Sample data uses generated spend until you add real numbers." : ""}
+              No marketing spend entered yet.{client.demoMode ? " Sample data uses generated spend until you add real numbers." : ""}
             </p>
           )}
         </section>

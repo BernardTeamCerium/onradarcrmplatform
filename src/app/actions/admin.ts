@@ -68,7 +68,7 @@ export async function createClient(form: FormData) {
     }
   }
   revalidatePath("/admin");
-  redirect(settingsPath(id, "Client created. Add ad spend and a login for them below."));
+  redirect(settingsPath(id, "Client created. Add marketing spend and a login for them below."));
 }
 
 export async function updateProfile(form: FormData) {
@@ -148,13 +148,13 @@ export async function addSpend(form: FormData) {
   const month = str(form, "month");
   const amount = Number(str(form, "amount"));
   if (!/^\d{4}-\d{2}$/.test(month) || !Number.isFinite(amount) || amount < 0) {
-    redirect(settingsPath(id, "Enter a month and a spend amount of 0 or more."));
+    redirect(settingsPath(id, "Enter a month and a marketing spend amount of 0 or more."));
   }
   await mutateClient(id, (c) => {
     c.spend.push({ id: newId("sp"), month, amount, note: str(form, "note") || undefined });
     c.spend.sort((a, b) => b.month.localeCompare(a.month));
   });
-  redirect(settingsPath(id, "Ad spend added."));
+  redirect(settingsPath(id, "Marketing spend added."));
 }
 
 export async function deleteSpend(form: FormData) {
@@ -162,7 +162,7 @@ export async function deleteSpend(form: FormData) {
   const id = str(form, "clientId");
   const spendId = str(form, "spendId");
   await mutateClient(id, (c) => (c.spend = c.spend.filter((s) => s.id !== spendId)));
-  redirect(settingsPath(id, "Ad spend entry removed."));
+  redirect(settingsPath(id, "Marketing spend entry removed."));
 }
 
 export async function saveFigures(form: FormData) {
