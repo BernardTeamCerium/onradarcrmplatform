@@ -1,14 +1,12 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { promises as fs } from "fs";
-import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
 import { clearMetricsCache } from "@/lib/metrics";
-import { getClient, LOGO_DIR, newId, slugify, updateDb } from "@/lib/store";
+import { deleteLogo, getClient, newId, slugify, updateDb, writeLogo } from "@/lib/store";
 import type { Client, Role } from "@/lib/types";
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
@@ -35,9 +33,8 @@ async function saveLogo(clientId: string, file: File) {
   const ext = LOGO_EXT[file.type];
   if (!ext) throw new Error("Logo must be a PNG, JPG, WEBP, or SVG file.");
   if (file.size > 2 * 1024 * 1024) throw new Error("Logo must be under 2 MB.");
-  await fs.mkdir(LOGO_DIR, { recursive: true });
   const name = `${clientId}-${Date.now()}${ext}`;
-  await fs.writeFile(path.join(LOGO_DIR, name), Buffer.from(await file.arrayBuffer()));
+  await writeLogo(name, Buffer.from(await file.arrayBuffer()));
   return name;
 }
 
@@ -95,7 +92,7 @@ export async function updateProfile(form: FormData) {
     if (logoFile) c.logo = logoFile;
   });
   if (logoFile && previous && !/^(https?:|\/)/.test(previous)) {
-    await fs.rm(path.join(LOGO_DIR, path.basename(previous)), { force: true });
+    await deleteLogo(previous);
   }
   redirect(settingsPath(id, "Profile saved."));
 }
@@ -105,7 +102,7 @@ export async function removeLogo(form: FormData) {
   const id = str(form, "clientId");
   const previous = (await getClient(id))?.logo;
   await mutateClient(id, (c) => (c.logo = undefined));
-  if (previous && !/^(https?:|\/)/.test(previous)) await fs.rm(path.join(LOGO_DIR, path.basename(previous)), { force: true });
+  if (previous && !/^(https?:|\/)/.test(previous)) await deleteLogo(previous);
   redirect(settingsPath(id, "Logo removed."));
 }
 

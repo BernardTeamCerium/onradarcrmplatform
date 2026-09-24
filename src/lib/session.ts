@@ -1,4 +1,6 @@
+import "server-only";
 import { SignJWT, jwtVerify } from "jose";
+import { getAuthSecret } from "./store";
 import type { Role } from "./types";
 
 export const SESSION_COOKIE = "onradar_session";
@@ -11,15 +13,8 @@ export interface SessionPayload {
   name: string;
 }
 
-function secretKey() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("AUTH_SECRET must be set in production");
-    }
-    return new TextEncoder().encode("onradar-dev-only-secret-do-not-use-in-production");
-  }
-  return new TextEncoder().encode(secret);
+async function secretKey() {
+  return new TextEncoder().encode(await getAuthSecret());
 }
 
 export async function signSession(payload: SessionPayload) {
@@ -27,13 +22,13 @@ export async function signSession(payload: SessionPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(secretKey());
+    .sign(await secretKey());
 }
 
 export async function verifySession(token: string | undefined): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secretKey());
+    const { payload } = await jwtVerify(token, await secretKey());
     return payload as unknown as SessionPayload;
   } catch {
     return null;

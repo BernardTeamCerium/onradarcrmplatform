@@ -30,7 +30,7 @@ Requires Node 20+.
 
 ```bash
 npm install
-cp .env.example .env      # then set AUTH_SECRET and the seed passwords
+cp .env.example .env      # optional: change the seed passwords
 npm run dev               # http://localhost:3000
 ```
 
@@ -55,21 +55,28 @@ Until a client is connected, the dashboard shows realistic **sample data**, clea
 
 Results are cached for 5 minutes per client and date range. Saving a client's settings clears the cache.
 
-## Deploying
+## Deploying to Netlify (recommended)
 
-Everything the app stores (users, client settings, GoHighLevel tokens, uploaded logos) lives in a JSON file under `DATA_DIR` (default `./data`, which is git-ignored). So:
+The repo includes `netlify.toml`. On Netlify, logins, settings and logos are stored in **Netlify Blobs** automatically, and the session secret is generated on first run. There's nothing to configure.
 
-- Deploy to a host with a **persistent disk**, such as Railway, Render or Fly.io with a volume, or any VPS. Point `DATA_DIR` at the volume, set `AUTH_SECRET` (`openssl rand -base64 32`), then run `npm run build && npm start`.
-- Serverless hosts like Vercel don't keep files between requests, so changes made in the admin would be lost. Before running many clients in production, move `src/lib/store.ts` to a database such as Postgres. It is the only file that touches storage.
+1. In Netlify, choose **Add new project → Import an existing project → GitHub**, then pick this repo and the branch to deploy.
+2. Keep the detected settings (build command `npm run build`) and click **Deploy**.
+3. To use your own domain, go to **Domain management → Add a domain** and enter something like `dashboard.onradarcrm.com`. If onradarcrm.com's DNS is managed by Netlify, it connects automatically. Otherwise, add the CNAME record Netlify shows at your DNS provider. HTTPS is issued automatically.
+4. Sign in with the admin login and change both passwords (Admin → Users, and the Sibley settings page).
+
+Optional environment variables (Site configuration → Environment variables): `AUTH_SECRET` to pin the session secret, and `SHOW_DEMO_LOGINS=false` to hide the demo emails on the login page.
+
+### Other hosts
+
+Anywhere else, data is saved on disk under `DATA_DIR` (default `./data`), so use a host with a persistent disk. Then run `npm run build && npm start`.
 
 ## Project layout
 
 ```
 src/lib/ghl.ts          GoHighLevel API v2 client (Private Integration token auth)
 src/lib/metrics.ts      Metric calculations, live + sample data, caching
-src/lib/store.ts        JSON data store + first-run seed (admin, Sibley client, Sibley login)
+src/lib/store.ts        Data store (Netlify Blobs or local disk) + first-run seed (admin, Sibley client, Sibley login)
 src/lib/session.ts      Signed session cookie (JWT, 12h)
-src/middleware.ts       Route protection (/admin is admin-only)
 src/app/dashboard       Client dashboard
 src/app/admin           Admin: client list, client dashboard, client settings, users
 src/components          KPI tiles, trend chart, funnel, branding
