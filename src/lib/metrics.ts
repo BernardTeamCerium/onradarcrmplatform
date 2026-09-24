@@ -228,12 +228,15 @@ function demoDay(client: Client, date: string): DemoDay {
   const rand = rng(hash(`${client.id}:${date}`));
   const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
   const weekday = dow === 0 || dow === 6 ? 0.55 : 1;
-  // Always draw the spend value so entering real spend doesn't shift the rest of the sample stream.
-  const sampleSpend = Math.round((260 + rand() * 110) * (weekday === 1 ? 1 : 0.75));
-  const spend = client.spend.length > 0 ? dailySpend(client, date) : sampleSpend;
+  // Always draw the spend noise so entering real spend doesn't shift the rest of the sample stream.
+  const spendNoise = rand();
   const leads = Math.max(0, Math.round((7 + rand() * 7) * weekday));
+  // Sample spend tracks leads at roughly $100 per lead (±10%); with ~16% of leads booking,
+  // cost per appointment lands around $550–$700.
+  const sampleSpend = Math.round(Math.max(leads, 1) * (90 + spendNoise * 20));
+  const spend = client.spend.length > 0 ? dailySpend(client, date) : sampleSpend;
   const conversations = leads + binomial(leads, 0.65, rand);
-  const appointments = binomial(leads, 0.14, rand);
+  const appointments = binomial(leads, 0.16, rand);
   const applicants = binomial(appointments, 0.52, rand);
   const sales = binomial(applicants, 0.45, rand);
   const premium = Math.round(applicants * client.averagePremium * (0.6 + rand() * 0.8));
@@ -270,11 +273,12 @@ function demoMonth(client: Client, month: string, today: string): DemoDay[] {
 
   if (fig.appointments !== undefined) {
     const before = live.reduce((a, r) => a + r.appointments, 0);
-    const appts = distribute(fig.appointments, live.map((r) => r.appointments));
+    // Spread in proportion to leads so cost per appointment stays steady week to week.
+    const appts = distribute(fig.appointments, live.map((r) => r.leads));
     const factor = before > 0 ? fig.appointments / before : 0;
     // Keep applications and sales in the same proportion to appointments as the sample had.
-    const apps = distribute(Math.round(live.reduce((a, r) => a + r.applicants, 0) * factor), live.map((r) => r.applicants));
-    const sales = distribute(Math.round(live.reduce((a, r) => a + r.sales, 0) * factor), live.map((r) => r.sales));
+    const apps = distribute(Math.round(live.reduce((a, r) => a + r.applicants, 0) * factor), appts);
+    const sales = distribute(Math.round(live.reduce((a, r) => a + r.sales, 0) * factor), appts);
     live.forEach((r, i) => {
       r.appointments = appts[i];
       r.applicants = Math.min(apps[i], appts[i]);
