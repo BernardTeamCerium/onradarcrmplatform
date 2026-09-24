@@ -7,13 +7,15 @@ A branded, login-protected dashboard that pulls each client's numbers from **GoH
 | **Ad spend** | Entered monthly by an OnRadar admin (Client settings → Ad spend) and spread evenly across the month's days |
 | **Leads** | GoHighLevel contacts created in the period (`POST /contacts/search`) |
 | **Conversations** | GoHighLevel conversations started in the period (`GET /conversations/search`) |
-| **Appointments** | Events on every calendar in the sub-account, excluding cancelled, no-show and invalid (`GET /calendars/events`) |
+| **Connected appointments** | Events on every calendar in the sub-account, excluding cancelled, no-show and invalid (`GET /calendars/events`) |
 | **Cost per lead** | Spend ÷ Leads |
 | **Cost per appointment** | Spend ÷ Appointments |
 | **Applications submitted** | Opportunities that reached the "application" pipeline stage or later, or were won. The stage is matched by keyword and can be set per client |
 | **Sales conversion** | Won opportunities ÷ Leads |
-| **Estimated revenue** | Sum of won opportunity values. When a won deal has no value, the client's *average revenue per sale* is used instead |
-| **Estimated return** | (Revenue − Spend) ÷ Spend |
+| **Submitted premium** | Sum of opportunity values for applications submitted in the period. When an application has no value, the client's *average premium per application* is used instead. Credited to the client's agent (e.g. "Submitted by Troy Sibley") |
+| **Estimated return** | (Premium − Spend) ÷ Spend |
+
+**Monthly figures:** an admin can enter a month's connected appointments and submitted premium by hand (Client settings → Monthly figures). While a client shows sample data, the dashboard matches those numbers exactly for that month. Sibley Financial Group comes with September 2026 entered: 36 connected appointments and $5.6M submitted premium.
 
 Every metric is compared with the previous period of the same length. Date ranges: last 7 / 30 / 90 days, month to date, last month and year to date.
 

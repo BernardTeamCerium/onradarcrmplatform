@@ -14,13 +14,13 @@ interface KpiDef {
 }
 
 const KPIS: KpiDef[] = [
-  { key: "estimatedRevenue", label: "Estimated revenue", kind: "money", upIsGood: true, hero: true, formula: "Won deals in GoHighLevel" },
-  { key: "estimatedReturn", label: "Estimated return", kind: "percent", upIsGood: true, hero: true, formula: "(Revenue − Spend) ÷ Spend" },
+  { key: "premium", label: "Submitted premium", kind: "money", upIsGood: true, hero: true, formula: "Premium on submitted applications" },
+  { key: "estimatedReturn", label: "Estimated return", kind: "percent", upIsGood: true, hero: true, formula: "(Premium − Spend) ÷ Spend" },
   { key: "spend", label: "Ad spend", kind: "money", upIsGood: false },
   { key: "leads", label: "Leads", kind: "count", upIsGood: true, formula: "New contacts" },
   { key: "costPerLead", label: "Cost per lead", kind: "money2", upIsGood: false, formula: "Spend ÷ Leads" },
   { key: "conversations", label: "Conversations", kind: "count", upIsGood: true, formula: "New conversations" },
-  { key: "appointments", label: "Appointments", kind: "count", upIsGood: true, formula: "Booked, not cancelled" },
+  { key: "appointments", label: "Connected appointments", kind: "count", upIsGood: true, formula: "Held, not cancelled or no-show" },
   { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Spend ÷ Appointments" },
   { key: "applicants", label: "Applications submitted", kind: "count", upIsGood: true, formula: "Reached application stage" },
   { key: "salesConversion", label: "Sales conversion", kind: "percent", upIsGood: true, formula: "Sales ÷ Leads" },
@@ -39,7 +39,7 @@ function Delta({ def, now, prev }: { def: KpiDef; now: number | null; prev: numb
   let change: number;
   if (def.kind === "percent") {
     change = now - prev;
-    text = `${change >= 0 ? "+" : "−"}${Math.abs(change * 100).toFixed(Math.abs(change) >= 0.1 ? 0 : 1)} pts`;
+    text = `${change >= 0 ? "+" : "−"}${Math.abs(change * 100).toLocaleString("en-US", { maximumFractionDigits: Math.abs(change) >= 0.1 ? 0 : 1 })} pts`;
   } else {
     if (prev === 0) return <span className="delta">New this period</span>;
     change = (now - prev) / Math.abs(prev);
@@ -55,7 +55,7 @@ function Delta({ def, now, prev }: { def: KpiDef; now: number | null; prev: numb
   );
 }
 
-export function KpiGrid({ metrics, previous }: { metrics: Metrics; previous: Metrics }) {
+export function KpiGrid({ metrics, previous, agent }: { metrics: Metrics; previous: Metrics; agent?: string }) {
   return (
     <section className="kpi-grid" aria-label="Key metrics">
       {KPIS.map((def) => (
@@ -63,7 +63,9 @@ export function KpiGrid({ metrics, previous }: { metrics: Metrics; previous: Met
           <div className="label">{def.label}</div>
           <div className="value" style={def.hero ? { fontSize: 34 } : undefined}>{fmt(def.kind, metrics[def.key])}</div>
           <Delta def={def} now={metrics[def.key]} prev={previous[def.key]} />
-          {def.formula && <div className="formula">{def.formula}</div>}
+          {def.formula && (
+            <div className="formula">{def.key === "premium" && agent ? `Submitted by ${agent}` : def.formula}</div>
+          )}
         </div>
       ))}
     </section>

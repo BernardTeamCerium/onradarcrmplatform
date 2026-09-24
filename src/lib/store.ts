@@ -80,6 +80,24 @@ export function slugify(input: string) {
     .replace(/^-|-$/g, "");
 }
 
+const SIBLEY_SEPTEMBER = { id: "fig_sibley_2026_09", month: "2026-09", appointments: 36, premium: 5_600_000 };
+
+/** Upgrades data saved by older versions of the app (e.g. an already-deployed Netlify site). */
+function migrate(db: Database) {
+  for (const c of db.clients as (Client & { averageDealValue?: number })[]) {
+    if (c.figures === undefined) {
+      c.figures = c.id === "cl_sibley" ? [SIBLEY_SEPTEMBER] : [];
+      if (c.id === "cl_sibley") {
+        c.primaryAgent ??= "Troy Sibley";
+        c.averagePremium ??= 250000;
+      }
+    }
+    if (c.averagePremium === undefined) c.averagePremium = c.averageDealValue ?? 0;
+    delete c.averageDealValue;
+  }
+  return db;
+}
+
 async function seed(): Promise<Database> {
   const now = new Date().toISOString();
   const sibley: Client = {
@@ -95,7 +113,9 @@ async function seed(): Promise<Database> {
       applicationStageKeywords: ["application", "submitted"],
     },
     spend: [],
-    averageDealValue: 3000,
+    averagePremium: 250000,
+    primaryAgent: "Troy Sibley",
+    figures: [SIBLEY_SEPTEMBER],
     demoMode: true,
     createdAt: now,
   };
@@ -123,7 +143,7 @@ async function seed(): Promise<Database> {
 
 export async function readDb(): Promise<Database> {
   const raw = await readBytes(DB_KEY);
-  if (raw) return JSON.parse(raw.toString("utf8")) as Database;
+  if (raw) return migrate(JSON.parse(raw.toString("utf8")) as Database);
   const db = await seed();
   await writeDb(db);
   return db;

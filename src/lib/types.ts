@@ -19,6 +19,16 @@ export interface SpendEntry {
   note?: string;
 }
 
+export interface MonthlyFigures {
+  id: string;
+  /** YYYY-MM */
+  month: string;
+  /** Connected appointments for the month. */
+  appointments?: number;
+  /** Premium submitted in the month ($). */
+  premium?: number;
+}
+
 export interface GhlSettings {
   /** GoHighLevel sub-account (location) ID. */
   locationId: string;
@@ -42,8 +52,12 @@ export interface Client {
   logo?: string;
   ghl: GhlSettings;
   spend: SpendEntry[];
-  /** Used for estimated revenue when won opportunities carry no monetary value. */
-  averageDealValue: number;
+  /** Used for submitted premium when an application's opportunity carries no monetary value. */
+  averagePremium: number;
+  /** Agent credited with submitted premium on the dashboard, e.g. "Troy Sibley". */
+  primaryAgent?: string;
+  /** Figures entered by hand for a month. They replace sample data for that month. */
+  figures: MonthlyFigures[];
   /** When true (or when no API token is set), the dashboard shows generated sample data. */
   demoMode: boolean;
   createdAt: string;
@@ -64,7 +78,8 @@ export interface Metrics {
   sales: number;
   salesConversion: number | null;
   applicants: number;
-  estimatedRevenue: number;
+  /** Premium submitted on applications in the period ($). */
+  premium: number;
   estimatedReturn: number | null;
 }
 

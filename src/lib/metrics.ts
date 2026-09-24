@@ -60,7 +60,7 @@ function derive(base: {
   leads: number;
   sales: number;
   applicants: number;
-  estimatedRevenue: number;
+  premium: number;
 }): Metrics {
   const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
   return {
@@ -68,7 +68,7 @@ function derive(base: {
     costPerLead: ratio(base.spend, base.leads),
     costPerAppointment: ratio(base.spend, base.appointments),
     salesConversion: ratio(base.sales, base.leads),
-    estimatedReturn: base.spend > 0 ? (base.estimatedRevenue - base.spend) / base.spend : null,
+    estimatedReturn: base.spend > 0 ? (base.premium - base.spend) / base.spend : null,
   };
 }
 
@@ -121,19 +121,21 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
 
   const oppStats = (r: { start: Date; end: Date }) => {
     let sales = 0;
-    let revenue = 0;
+    let premium = 0;
     let applicants = 0;
     for (const o of opps) {
       if (o.status === "won" && inWindow(o.lastStatusChangeAt ?? o.updatedAt, r)) {
         sales++;
-        revenue += o.monetaryValue && o.monetaryValue > 0 ? o.monetaryValue : client.averageDealValue;
       }
       const appIdx = appStageIndex.get(o.pipelineId);
       const reachedApp =
         o.status === "won" || (appIdx !== undefined && (stageIndex.get(o.pipelineStageId) ?? -1) >= appIdx);
-      if (reachedApp && inWindow(o.lastStageChangeAt ?? o.createdAt, r)) applicants++;
+      if (reachedApp && inWindow(o.lastStageChangeAt ?? o.createdAt, r)) {
+        applicants++;
+        premium += o.monetaryValue && o.monetaryValue > 0 ? o.monetaryValue : client.averagePremium;
+      }
     }
-    return { sales, revenue, applicants };
+    return { sales, premium, applicants };
   };
 
   const days = eachDay(range);
@@ -155,7 +157,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       leads: leadsNow.total,
       sales: now.sales,
       applicants: now.applicants,
-      estimatedRevenue: now.revenue,
+      premium: now.premium,
     }),
     previous: derive({
       spend: spendFor(prevDays),
@@ -164,7 +166,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       leads: leadsPrev.total,
       sales: before.sales,
       applicants: before.applicants,
-      estimatedRevenue: before.revenue,
+      premium: before.premium,
     }),
     daily: days.map((d) => ({
       date: d,
@@ -218,7 +220,7 @@ interface DemoDay extends DailyPoint {
   conversations: number;
   applicants: number;
   sales: number;
-  revenue: number;
+  premium: number;
 }
 
 function demoDay(client: Client, date: string): DemoDay {
@@ -230,17 +232,76 @@ function demoDay(client: Client, date: string): DemoDay {
   const spend = client.spend.length > 0 ? dailySpend(client, date) : sampleSpend;
   const leads = Math.max(0, Math.round((7 + rand() * 7) * weekday));
   const conversations = leads + binomial(leads, 0.65, rand);
-  const appointments = binomial(leads, 0.34, rand);
-  const applicants = binomial(appointments + 1, 0.42, rand);
-  const sales = binomial(applicants, 0.4, rand);
-  const revenue = sales * client.averageDealValue * (0.7 + rand() * 0.5);
-  return { date, leads, conversations, appointments, applicants, sales, revenue, spend };
+  const appointments = binomial(leads, 0.14, rand);
+  const applicants = binomial(appointments, 0.52, rand);
+  const sales = binomial(applicants, 0.45, rand);
+  const premium = Math.round(applicants * client.averagePremium * (0.6 + rand() * 0.8));
+  return { date, leads, conversations, appointments, applicants, sales, premium, spend };
+}
+
+/** Splits an integer total across buckets in proportion to `weights` (largest-remainder rounding). */
+function distribute(total: number, weights: number[]) {
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const w = sum > 0 ? weights : weights.map(() => 1);
+  const wsum = sum > 0 ? sum : w.length;
+  const exact = w.map((x) => (x / wsum) * total);
+  const out = exact.map(Math.floor);
+  let left = total - out.reduce((a, b) => a + b, 0);
+  const order = exact.map((x, i) => [x - Math.floor(x), i] as const).sort((a, b) => b[0] - a[0]);
+  for (let k = 0; left > 0 && k < order.length; k++, left--) out[order[k][1]]++;
+  return out;
+}
+
+const ZERO_DAY = { leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 };
+
+/**
+ * Sample rows for one month. When the admin has entered figures for that month, the sample is
+ * rescaled so the month adds up to exactly those numbers (spread over the days elapsed so far).
+ */
+function demoMonth(client: Client, month: string, today: string): DemoDay[] {
+  const [y, m] = month.split("-").map(Number);
+  const rows = eachDay({ start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) }).map((d) =>
+    d > today ? { ...demoDay(client, d), ...ZERO_DAY } : demoDay(client, d),
+  );
+  const fig = client.figures.find((f) => f.month === month);
+  const live = rows.filter((r) => r.date <= today);
+  if (!fig || live.length === 0) return rows;
+
+  if (fig.appointments !== undefined) {
+    const before = live.reduce((a, r) => a + r.appointments, 0);
+    const appts = distribute(fig.appointments, live.map((r) => r.appointments));
+    const factor = before > 0 ? fig.appointments / before : 0;
+    // Keep applications and sales in the same proportion to appointments as the sample had.
+    const apps = distribute(Math.round(live.reduce((a, r) => a + r.applicants, 0) * factor), live.map((r) => r.applicants));
+    const sales = distribute(Math.round(live.reduce((a, r) => a + r.sales, 0) * factor), live.map((r) => r.sales));
+    live.forEach((r, i) => {
+      r.appointments = appts[i];
+      r.applicants = Math.min(apps[i], appts[i]);
+      r.sales = Math.min(sales[i], r.applicants);
+    });
+  }
+  const premiumWeights = live.map((r) => r.applicants);
+  const premium =
+    fig.premium !== undefined
+      ? distribute(Math.round(fig.premium), premiumWeights)
+      : live.map((r) => Math.round(r.applicants * client.averagePremium));
+  live.forEach((r, i) => (r.premium = premium[i]));
+  return rows;
+}
+
+function demoRows(client: Client, r: { start: Date; end: Date }) {
+  const today = dayKey(Date.now());
+  const months = new Map<string, Map<string, DemoDay>>();
+  return eachDay(r).map((d) => {
+    const month = d.slice(0, 7);
+    if (!months.has(month)) months.set(month, new Map(demoMonth(client, month, today).map((row) => [row.date, row])));
+    return months.get(month)!.get(d)!;
+  });
 }
 
 function demoData(client: Client, range: DateRange): DashboardData {
-  const today = dayKey(Date.now());
   const sum = (r: { start: Date; end: Date }) => {
-    const rows = eachDay(r).map((d) => (d > today ? { ...demoDay(client, d), leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, revenue: 0 } : demoDay(client, d)));
+    const rows = demoRows(client, r);
     const total = rows.reduce(
       (acc, r) => {
         acc.spend += r.spend;
@@ -249,10 +310,10 @@ function demoData(client: Client, range: DateRange): DashboardData {
         acc.appointments += r.appointments;
         acc.applicants += r.applicants;
         acc.sales += r.sales;
-        acc.estimatedRevenue += r.revenue;
+        acc.premium += r.premium;
         return acc;
       },
-      { spend: 0, leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, estimatedRevenue: 0 },
+      { spend: 0, leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 },
     );
     return { rows, total };
   };
@@ -267,4 +328,3 @@ function demoData(client: Client, range: DateRange): DashboardData {
     warnings: [],
   };
 }
-

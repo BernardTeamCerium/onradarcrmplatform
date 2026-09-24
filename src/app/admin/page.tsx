@@ -25,9 +25,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       spend: t.spend + r.data.metrics.spend,
       leads: t.leads + r.data.metrics.leads,
       appointments: t.appointments + r.data.metrics.appointments,
-      revenue: t.revenue + r.data.metrics.estimatedRevenue,
+      premium: t.premium + r.data.metrics.premium,
     }),
-    { spend: 0, leads: 0, appointments: 0, revenue: 0 },
+    { spend: 0, leads: 0, appointments: 0, premium: 0 },
   );
 
   return (
@@ -47,8 +47,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <div className="kpi"><div className="label">Clients</div><div className="value">{rows.length}</div></div>
           <div className="kpi"><div className="label">Total ad spend</div><div className="value">{money(totals.spend)}</div></div>
           <div className="kpi"><div className="label">Total leads</div><div className="value">{count(totals.leads)}</div></div>
-          <div className="kpi"><div className="label">Total appointments</div><div className="value">{count(totals.appointments)}</div></div>
-          <div className="kpi"><div className="label">Est. revenue generated</div><div className="value">{money(totals.revenue)}</div></div>
+          <div className="kpi"><div className="label">Connected appointments</div><div className="value">{count(totals.appointments)}</div></div>
+          <div className="kpi"><div className="label">Submitted premium</div><div className="value">{money(totals.premium)}</div></div>
         </section>
 
         <section className="card" style={{ padding: 0 }}>
@@ -65,7 +65,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   <th className="num">Cost / appt</th>
                   <th className="num">Apps</th>
                   <th className="num">Sales conv.</th>
-                  <th className="num">Est. revenue</th>
+                  <th className="num">Premium</th>
                   <th className="num">Est. return</th>
                   <th />
                 </tr>
@@ -96,7 +96,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <td className="num">{money(data.metrics.costPerAppointment, true)}</td>
                     <td className="num">{count(data.metrics.applicants)}</td>
                     <td className="num">{percent(data.metrics.salesConversion)}</td>
-                    <td className="num">{money(data.metrics.estimatedRevenue)}</td>
+                    <td className="num">{money(data.metrics.premium)}</td>
                     <td className="num">{percent(data.metrics.estimatedReturn, 0)}</td>
                     <td>
                       <div className="row" style={{ flexWrap: "nowrap", gap: 6 }}>

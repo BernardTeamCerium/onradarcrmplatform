@@ -52,7 +52,8 @@ export async function createClient(form: FormData) {
       brandColor: str(form, "brandColor") || "#1f3a5f",
       ghl: { locationId: str(form, "locationId"), apiToken: str(form, "apiToken"), applicationStageKeywords: ["application", "submitted"] },
       spend: [],
-      averageDealValue: Number(str(form, "averageDealValue")) || 0,
+      averagePremium: Number(str(form, "averagePremium")) || 0,
+      figures: [],
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
     });
@@ -88,7 +89,8 @@ export async function updateProfile(form: FormData) {
     c.slug = slugify(c.name);
     c.industry = str(form, "industry") || undefined;
     c.brandColor = str(form, "brandColor") || c.brandColor;
-    c.averageDealValue = Math.max(0, Number(str(form, "averageDealValue")) || 0);
+    c.averagePremium = Math.max(0, Number(str(form, "averagePremium")) || 0);
+    c.primaryAgent = str(form, "primaryAgent") || undefined;
     if (logoFile) c.logo = logoFile;
   });
   if (logoFile && previous && !/^(https?:|\/)/.test(previous)) {
@@ -161,6 +163,36 @@ export async function deleteSpend(form: FormData) {
   const spendId = str(form, "spendId");
   await mutateClient(id, (c) => (c.spend = c.spend.filter((s) => s.id !== spendId)));
   redirect(settingsPath(id, "Ad spend entry removed."));
+}
+
+export async function saveFigures(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const month = str(form, "month");
+  const num = (key: string) => {
+    const v = str(form, key).replace(/[$,\s]/g, "");
+    return v === "" ? undefined : Number(v);
+  };
+  const appointments = num("appointments");
+  const premium = num("premium");
+  const bad = (v: number | undefined) => v !== undefined && (!Number.isFinite(v) || v < 0);
+  if (!/^\d{4}-\d{2}$/.test(month) || bad(appointments) || bad(premium) || (appointments === undefined && premium === undefined)) {
+    redirect(settingsPath(id, "Enter a month and at least one figure (0 or more)."));
+  }
+  await mutateClient(id, (c) => {
+    c.figures = c.figures.filter((f) => f.month !== month);
+    c.figures.push({ id: newId("fig"), month, appointments: appointments === undefined ? undefined : Math.round(appointments), premium });
+    c.figures.sort((a, b) => b.month.localeCompare(a.month));
+  });
+  redirect(settingsPath(id, "Monthly figures saved."));
+}
+
+export async function deleteFigures(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const figId = str(form, "figId");
+  await mutateClient(id, (c) => (c.figures = c.figures.filter((f) => f.id !== figId)));
+  redirect(settingsPath(id, "Monthly figures removed."));
 }
 
 export async function deleteClient(form: FormData) {

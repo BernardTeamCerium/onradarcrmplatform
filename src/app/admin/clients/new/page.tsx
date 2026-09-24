@@ -23,7 +23,7 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
           <div className="form-grid">
             <label className="field">Location ID<input name="locationId" placeholder="e.g. ve9EPM428h8vShlRW1KT" /></label>
             <label className="field">Private Integration token<input name="apiToken" type="password" autoComplete="off" placeholder="pit-…" /></label>
-            <label className="field">Average revenue per sale ($)<input name="averageDealValue" type="number" min="0" step="1" defaultValue="0" /><span className="hint">Used when a won deal has no value in GoHighLevel</span></label>
+            <label className="field">Average premium per application ($)<input name="averagePremium" type="number" min="0" step="1" defaultValue="0" /><span className="hint">Used when an application has no premium value in GoHighLevel</span></label>
           </div>
           <div className="form-actions"><button className="btn primary" type="submit">Create client</button></div>
         </form>

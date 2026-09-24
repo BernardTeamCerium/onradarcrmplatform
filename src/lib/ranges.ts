@@ -26,7 +26,7 @@ function utcMidnight(d: Date) {
 }
 
 export function resolveRange(key: string | undefined, now = new Date()): DateRange {
-  const preset = RANGE_PRESETS.find((p) => p.key === key) ?? RANGE_PRESETS[1];
+  const preset = RANGE_PRESETS.find((p) => p.key === key) ?? RANGE_PRESETS[3]; // default: month to date
   const tomorrow = new Date(utcMidnight(now).getTime() + DAY);
   let start: Date;
   let end = tomorrow;

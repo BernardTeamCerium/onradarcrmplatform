@@ -13,7 +13,7 @@ export function count(value: number) {
 
 export function percent(value: number | null, digits = 1) {
   if (value === null || !Number.isFinite(value)) return "—";
-  return `${(value * 100).toFixed(digits)}%`;
+  return `${(value * 100).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 }
 
 export function shortDate(iso: string) {

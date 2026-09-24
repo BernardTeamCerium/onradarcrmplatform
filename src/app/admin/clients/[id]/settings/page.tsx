@@ -5,11 +5,13 @@ import { ClientLogo } from "@/components/ClientLogo";
 import {
   addSpend,
   createUser,
+  deleteFigures,
   deleteClient,
   deleteSpend,
   deleteUser,
   removeLogo,
   resetPassword,
+  saveFigures,
   testConnection,
   updateGhl,
   updateProfile,
@@ -67,9 +69,14 @@ export default async function ClientSettings({
               <label className="field">Industry<input name="industry" defaultValue={client.industry ?? ""} /></label>
               <label className="field">Brand color<input name="brandColor" type="color" defaultValue={client.brandColor} /></label>
               <label className="field">
-                Average revenue per sale ($)
-                <input name="averageDealValue" type="number" min="0" step="1" defaultValue={client.averageDealValue} />
-                <span className="hint">Used when a won deal has no value in GoHighLevel</span>
+                Average premium per application ($)
+                <input name="averagePremium" type="number" min="0" step="1" defaultValue={client.averagePremium} />
+                <span className="hint">Used when an application has no premium value in GoHighLevel</span>
+              </label>
+              <label className="field">
+                Agent name
+                <input name="primaryAgent" defaultValue={client.primaryAgent ?? ""} placeholder="Troy Sibley" />
+                <span className="hint">Shown as &ldquo;Submitted by …&rdquo; under submitted premium</span>
               </label>
               <label className="field">
                 {client.logo ? "Replace logo" : "Upload logo"}
@@ -178,6 +185,49 @@ export default async function ClientSettings({
             <p className="muted small" style={{ marginTop: 12 }}>
               No spend entered yet.{client.demoMode ? " Sample data uses generated spend until you add real numbers." : ""}
             </p>
+          )}
+        </section>
+
+        {/* Monthly figures */}
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h2>Monthly figures</h2>
+              <p className="muted small">
+                Enter a month&apos;s connected appointments and submitted premium by hand. While the dashboard shows sample
+                data, these replace the sample numbers for that month exactly. Saving a month again overwrites it.
+              </p>
+            </div>
+          </div>
+          <form action={saveFigures} className="form-grid" style={{ alignItems: "end" }}>
+            <input type="hidden" name="clientId" value={id} />
+            <label className="field">Month<input name="month" type="month" defaultValue={thisMonth} required /></label>
+            <label className="field">Connected appointments<input name="appointments" type="number" min="0" step="1" /></label>
+            <label className="field">Submitted premium ($)<input name="premium" inputMode="decimal" placeholder="5,600,000" /></label>
+            <div><button className="btn primary" type="submit">Save figures</button></div>
+          </form>
+          {client.figures.length > 0 && (
+            <div className="table-wrap" style={{ marginTop: 16 }}>
+              <table>
+                <thead><tr><th>Month</th><th className="num">Connected appts</th><th className="num">Submitted premium</th><th /></tr></thead>
+                <tbody>
+                  {client.figures.map((f) => (
+                    <tr key={f.id}>
+                      <td>{new Date(`${f.month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</td>
+                      <td className="num">{f.appointments ?? "—"}</td>
+                      <td className="num">{f.premium === undefined ? "—" : money(f.premium)}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <form action={deleteFigures}>
+                          <input type="hidden" name="clientId" value={id} />
+                          <input type="hidden" name="figId" value={f.id} />
+                          <button className="btn sm danger" type="submit">Remove</button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 

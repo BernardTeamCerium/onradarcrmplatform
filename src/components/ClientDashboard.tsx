@@ -69,14 +69,14 @@ export async function ClientDashboard({
         <p key={w} className="notice">{w}</p>
       ))}
 
-      <KpiGrid metrics={data.metrics} previous={data.previous} />
+      <KpiGrid metrics={data.metrics} previous={data.previous} agent={client.primaryAgent} />
 
       <div className="grid-2">
         <section className="card">
           <div className="card-head">
             <div>
               <h2>Leads and appointments</h2>
-              <p className="muted small">New leads and booked appointments per {trend.bucket}</p>
+              <p className="muted small">New leads and connected appointments per {trend.bucket}</p>
             </div>
           </div>
           <TrendChart points={trend.points} bucket={trend.bucket} />
@@ -110,8 +110,8 @@ export async function ClientDashboard({
               <div style={{ fontSize: 20, fontWeight: 650 }}>{money(data.metrics.spend)}</div>
             </div>
             <div style={{ flex: 1 }}>
-              <div className="muted small">Estimated revenue</div>
-              <div style={{ fontSize: 20, fontWeight: 650 }}>{money(data.metrics.estimatedRevenue)}</div>
+              <div className="muted small">Submitted premium</div>
+              <div style={{ fontSize: 20, fontWeight: 650 }}>{money(data.metrics.premium)}</div>
             </div>
           </div>
         </section>
@@ -120,8 +120,8 @@ export async function ClientDashboard({
       <p className="muted small">
         {data.source === "ghl" ? "Pulled from GoHighLevel" : "Sample data shown until GoHighLevel is connected"} ·
         updated {new Date(data.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}. Ad spend is
-        entered by your OnRadar account manager. Estimated revenue uses won opportunity values in GoHighLevel
-        {client.averageDealValue > 0 ? `, or ${money(client.averageDealValue)} per sale when a deal has no value` : ""}.
+        entered by your OnRadar account manager. Submitted premium is the value of applications submitted in GoHighLevel
+        {client.averagePremium > 0 ? `, or ${money(client.averagePremium)} per application when none is recorded` : ""}.
       </p>
     </div>
   );
