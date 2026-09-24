@@ -71,7 +71,7 @@ export default async function ClientSettings({
               <label className="field">
                 Average premium per application ($)
                 <input name="averagePremium" type="number" min="0" step="1" defaultValue={client.averagePremium} />
-                <span className="hint">Used when an application has no premium value in GoHighLevel</span>
+                <span className="hint">Used when an application has no premium value in the CRM</span>
               </label>
               <label className="field">
                 Agent name
@@ -96,13 +96,13 @@ export default async function ClientSettings({
           )}
         </section>
 
-        {/* GoHighLevel */}
+        {/* CRM connection */}
         <section className="card">
           <div className="card-head">
             <div>
-              <h2>GoHighLevel connection</h2>
+              <h2>CRM connection</h2>
               <p className="muted small">
-                In the client&apos;s GoHighLevel sub-account go to Settings → Private Integrations → Create, and grant read access to
+                In the client&apos;s CRM sub-account go to Settings → Private Integrations → Create, and grant read access to
                 Contacts, Conversations, Opportunities, Calendars, Calendar Events and Locations.
               </p>
             </div>

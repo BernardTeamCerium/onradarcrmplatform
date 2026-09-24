@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "OnRadar CRM · Client Dashboard",
-  description: "Marketing performance dashboards powered by GoHighLevel",
+  description: "Client performance dashboards by OnRadar CRM",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

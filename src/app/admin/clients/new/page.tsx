@@ -19,11 +19,11 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
             <label className="field">Brand color<input name="brandColor" type="color" defaultValue="#1f3a5f" /></label>
             <label className="field">Logo<input name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" /><span className="hint">PNG, JPG, WEBP or SVG, up to 2 MB</span></label>
           </div>
-          <h3>GoHighLevel sub-account (optional, can be added later)</h3>
+          <h3>CRM sub-account (optional, can be added later)</h3>
           <div className="form-grid">
             <label className="field">Location ID<input name="locationId" placeholder="e.g. ve9EPM428h8vShlRW1KT" /></label>
             <label className="field">Private Integration token<input name="apiToken" type="password" autoComplete="off" placeholder="pit-…" /></label>
-            <label className="field">Average premium per application ($)<input name="averagePremium" type="number" min="0" step="1" defaultValue="0" /><span className="hint">Used when an application has no premium value in GoHighLevel</span></label>
+            <label className="field">Average premium per application ($)<input name="averagePremium" type="number" min="0" step="1" defaultValue="0" /><span className="hint">Used when an application has no premium value in the CRM</span></label>
           </div>
           <div className="form-actions"><button className="btn primary" type="submit">Create client</button></div>
         </form>

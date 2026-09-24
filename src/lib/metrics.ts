@@ -26,10 +26,11 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
       data = await liveData(client, range);
     } catch (err) {
       // Never cache a failure; surface it on the dashboard instead of crashing the page.
+      console.error(`Live data failed for ${client.id}:`, err);
       return {
         ...demoData(client, range),
         source: "demo",
-        warnings: [`Could not reach GoHighLevel, showing sample data. ${(err as Error).message}`],
+        warnings: ["Live data is temporarily unavailable, so sample data is shown. Please check back shortly."],
       };
     }
   } else {

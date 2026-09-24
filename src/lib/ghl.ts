@@ -47,11 +47,11 @@ async function request<T>(
     }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new GhlError(`GoHighLevel ${path} failed (${res.status}): ${text.slice(0, 200)}`, res.status);
+      throw new GhlError(`CRM request ${path} failed (${res.status}): ${text.slice(0, 200)}`, res.status);
     }
     return (await res.json()) as T;
   }
-  throw new GhlError(`GoHighLevel ${path} rate limited`, 429);
+  throw new GhlError(`CRM request ${path} was rate limited`, 429);
 }
 
 export interface GhlLocation {

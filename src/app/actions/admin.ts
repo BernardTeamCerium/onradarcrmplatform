@@ -122,7 +122,7 @@ export async function updateGhl(form: FormData) {
       .filter(Boolean);
     c.demoMode = form.get("demoMode") === "on";
   });
-  redirect(settingsPath(id, "GoHighLevel settings saved."));
+  redirect(settingsPath(id, "CRM connection saved."));
 }
 
 export async function testConnection(form: FormData) {
@@ -135,7 +135,7 @@ export async function testConnection(form: FormData) {
   let msg: string;
   try {
     const loc = await getLocation({ locationId: client.ghl.locationId, apiToken: client.ghl.apiToken });
-    msg = `Connected to GoHighLevel sub-account "${loc.name}".`;
+    msg = `Connected to CRM sub-account "${loc.name}".`;
   } catch (err) {
     msg = `Connection failed: ${(err as Error).message}`;
   }
