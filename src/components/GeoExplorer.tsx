@@ -13,7 +13,6 @@ const BEST_BY = {
   cpc: { label: "Lowest cost per connected appt", fn: (c: Counts) => rates(c).costPerConnected, lower: true, fmt: (v: number) => money(v, true), min: (c: Counts) => c.connected >= 3 },
   cpl: { label: "Lowest cost per lead", fn: (c: Counts) => rates(c).cpl, lower: true, fmt: (v: number) => money(v, true), min: (c: Counts) => c.leads >= 10 },
   conv: { label: "Best sales conversion", fn: (c: Counts) => rates(c).salesConversion, lower: false, fmt: (v: number) => percent(v, 1), min: (c: Counts) => c.leads >= 10 },
-  connPct: { label: "Best connected appt %", fn: (c: Counts) => rates(c).connectedPct, lower: false, fmt: (v: number) => percent(v, 0), min: (c: Counts) => c.leads >= 10 },
   cycle: { label: "Fastest to application", fn: (c: Counts) => rates(c).cycleDays, lower: true, fmt: (v: number) => `${v.toFixed(1)} days`, min: (c: Counts) => c.applicants >= 2 },
   leads: { label: "Most leads", fn: (c: Counts) => c.leads, lower: false, fmt: (v: number) => `${count(v)} leads`, min: (c: Counts) => c.leads >= 1 },
 } as const;
@@ -98,7 +97,6 @@ export function GeoExplorer({ cells, sourceOrder }: { cells: GeoCell[]; sourceOr
         <td className="num">{count(c.apptsSet)}</td>
         <td className="num">{count(c.connected)}</td>
         <td className="num">{percent(d.connectRate, 0)}</td>
-        <td className="num">{percent(d.connectedPct, 0)}</td>
         <td className="num">{money(d.costPerConnected, true)}</td>
         <td className="num">{count(c.applicants)}</td>
         <td className="num">{d.cycleDays === null ? "—" : d.cycleDays.toFixed(1)}</td>
@@ -159,7 +157,6 @@ export function GeoExplorer({ cells, sourceOrder }: { cells: GeoCell[]; sourceOr
             metric("cpl", "Cost per lead", (c) => rates(c).cpl, (v) => money(v, true), true),
             metric("contact", "Contact rate", (c) => rates(c).contactRate, (v) => percent(v, 0)),
             metric("connected", "Connected appts", (c) => c.connected, (v) => count(v ?? 0)),
-            metric("connPct", "Connected appt %", (c) => rates(c).connectedPct, (v) => percent(v, 0)),
             metric("cpc", "Cost per connected appt", (c) => rates(c).costPerConnected, (v) => money(v, true), true),
             metric("apps", "Applications", (c) => c.applicants, (v) => count(v ?? 0)),
             metric("cycle", "Cycle time to application", (c) => rates(c).cycleDays, days, true),
@@ -200,7 +197,6 @@ export function GeoExplorer({ cells, sourceOrder }: { cells: GeoCell[]; sourceOr
                 <th className="num">Appts set</th>
                 <th className="num">Conn. appts</th>
                 <th className="num">Conn. rate</th>
-                <th className="num">Conn. appt %</th>
                 <th className="num">Cost / conn. appt</th>
                 <th className="num">Apps</th>
                 <th className="num">Days to app</th>

@@ -16,14 +16,13 @@ interface KpiDef {
 const KPIS: KpiDef[] = [
   { key: "premium", label: "Submitted premium", kind: "money", upIsGood: true, hero: true, formula: "Premium on submitted applications" },
   { key: "estimatedReturn", label: "Estimated return", kind: "percent", upIsGood: true, hero: true, formula: "(Premium − Marketing spend) ÷ Marketing spend" },
-  { key: "spend", label: "Marketing spend", kind: "money", upIsGood: false },
+  { key: "spend", label: "Marketing spend", kind: "money", upIsGood: false, hero: true },
   { key: "leads", label: "Leads", kind: "count", upIsGood: true, formula: "New contacts" },
   { key: "costPerLead", label: "Cost per lead", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Leads" },
   { key: "conversations", label: "Conversations", kind: "count", upIsGood: true, formula: "New conversations" },
   { key: "apptsSet", label: "Appointments set", kind: "count", upIsGood: true, formula: "Booked on the calendar" },
   { key: "appointments", label: "Connected appointments", kind: "count", upIsGood: true, formula: "Held, not cancelled or no-show" },
   { key: "connectRate", label: "Connected rate", kind: "percent", upIsGood: true, formula: "Connected ÷ Appointments set" },
-  { key: "connectedPct", label: "Connected appt %", kind: "percent", upIsGood: true, formula: "Connected appts ÷ Leads" },
   { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Connected appts" },
   { key: "applicants", label: "Applications submitted", kind: "count", upIsGood: true, formula: "Reached application stage" },
   { key: "cycleDays", label: "Avg. cycle time to application", kind: "days", upIsGood: false, formula: "Days from lead to application" },
@@ -71,8 +70,8 @@ export function KpiGrid({ metrics, previous, agent }: { metrics: Metrics; previo
   );
   return (
     <section className="stack" style={{ gap: 14 }} aria-label="Key metrics">
-      <div className="kpi-grid two">{KPIS.filter((d) => d.hero).map(tile)}</div>
-      <div className="kpi-grid">{KPIS.filter((d) => !d.hero).map(tile)}</div>
+      <div className="kpi-grid three">{KPIS.filter((d) => d.hero).map(tile)}</div>
+      <div className="kpi-grid five">{KPIS.filter((d) => !d.hero).map(tile)}</div>
     </section>
   );
 }

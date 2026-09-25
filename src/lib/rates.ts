@@ -37,7 +37,6 @@ export function rates(r: Counts) {
     cpl: spent ? ratio(r.spend, r.leads) : null,
     contactRate: ratio(r.conversations, r.leads),
     connectRate: ratio(r.connected, r.apptsSet),
-    connectedPct: ratio(r.connected, r.leads),
     cycleDays: ratio(r.cycleDaysSum, r.applicants),
     costPerConnected: spent ? ratio(r.spend, r.connected) : null,
     salesConversion: ratio(r.sales, r.leads),

@@ -79,7 +79,6 @@ function derive(base: {
     costPerAppointment: ratio(base.spend, base.appointments),
     salesConversion: ratio(base.sales, base.leads),
     cycleDays: ratio(base.cycleDaysSum, base.applicants),
-    connectedPct: ratio(base.appointments, base.leads),
     estimatedReturn: base.spend > 0 ? (base.premium - base.spend) / base.spend : null,
   };
 }

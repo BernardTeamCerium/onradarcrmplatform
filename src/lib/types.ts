@@ -135,8 +135,6 @@ export interface Metrics {
   appointments: number;
   /** Connected appointments ÷ appointments set. */
   connectRate: number | null;
-  /** Connected appointments ÷ leads: share of leads who reached a connected appointment. */
-  connectedPct: number | null;
   conversations: number;
   leads: number;
   costPerLead: number | null;

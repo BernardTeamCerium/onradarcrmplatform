@@ -92,7 +92,6 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
             metric("contact", "Contact rate", (r) => derived(r).contactRate, pct),
             metric("set", "Appts set", (r) => r.apptsSet, (v) => count(v ?? 0)),
             metric("connected", "Connected appts", (r) => r.connected, (v) => count(v ?? 0)),
-            metric("connPct", "Connected appt %", (r) => derived(r).connectedPct, pct),
             metric("cpc", "Cost per connected appt", (r) => derived(r).costPerConnected, (v) => money(v, true), true),
             metric("apps", "Applications", (r) => r.applicants, (v) => count(v ?? 0)),
             metric("cycle", "Cycle time to application", (r) => derived(r).cycleDays, days, true),
@@ -105,7 +104,7 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
         <div style={{ padding: "20px 20px 0" }}>
           <h2>Results by source</h2>
           <p className="muted small">
-            Contact rate = conversations ÷ leads. Conn. rate = connected ÷ appts set. Conn. appt % = connected ÷ leads. Days to app =
+            Contact rate = conversations ÷ leads. Conn. rate = connected ÷ appts set. Days to app =
             average days from lead to application. Sales conv. = sales ÷ leads. Rows add up to the Dashboard totals for the same dates.
           </p>
         </div>
@@ -122,7 +121,6 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
                 <th className="num">Appts set</th>
                 <th className="num">Conn. appts</th>
                 <th className="num">Conn. rate</th>
-                <th className="num">Conn. appt %</th>
                 <th className="num">Cost / conn. appt</th>
                 <th className="num">Apps</th>
                 <th className="num">Days to app</th>
@@ -144,7 +142,6 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
                     <td className="num">{count(r.apptsSet)}</td>
                     <td className="num">{count(r.connected)}</td>
                     <td className="num">{percent(d.connectRate, 0)}</td>
-                    <td className="num">{percent(d.connectedPct, 0)}</td>
                     <td className="num">{money(d.costPerConnected, true)}</td>
                     <td className="num">{count(r.applicants)}</td>
                     <td className="num">{d.cycleDays === null ? "—" : d.cycleDays.toFixed(1)}</td>

@@ -49,7 +49,7 @@ The **Marketing** tab breaks each date range down by source (TV, Radio, Facebook
 
 ## Geo
 
-The **Geo** tab shows the same measures as Marketing by **state** or **city**. Each row shows the **best source** in that place. You choose what "best" means (lowest cost per connected appointment, lowest cost per lead, best sales conversion, best connected appt %, fastest to application, or most leads). A source needs enough volume there to qualify. Click a place to see every source's numbers in it. The tab opens on Year to date because places need volume to compare fairly.
+The **Geo** tab shows the same measures as Marketing by **state** or **city**. Each row shows the **best source** in that place. You choose what "best" means (lowest cost per connected appointment, lowest cost per lead, best sales conversion, fastest to application, or most leads). A source needs enough volume there to qualify. Click a place to see every source's numbers in it. The tab opens on Year to date because places need volume to compare fairly.
 
 - **With live CRM data:** places come from each lead's city and state. Appointments, applications and sales follow their lead, and leads without a place are grouped as "Unknown".
 - **Spend:** it isn't recorded by place, so each source's spend is shared across places in proportion to the leads it produced there.
@@ -61,7 +61,7 @@ The **Trends** tab shows the last three years (or however many are entered) of *
 
 Enter and edit the numbers under Admin → client → **Settings → Yearly results & targets**. Sibley's submitted, paid and chargebacks are their reported figures. Their yearly appointment counts and all targets are placeholders to confirm.
 
-The main dashboard also shows **Appointments set**, **Connected rate** (connected ÷ appointments set), **Connected appt %** (connected ÷ leads) and **Avg. cycle time to application** (days from a lead coming in to their application). The last two also appear per source on the Marketing tab.
+The main dashboard also shows **Appointments set**, **Connected rate** (connected ÷ appointments set) and **Avg. cycle time to application** (days from a lead coming in to their application). Both also appear per source on the Marketing tab.
 
 ## Leads and the Typeform quiz
 

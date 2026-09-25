@@ -182,6 +182,9 @@ input[type="file"] { padding: 6px; height: auto; }
 .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .kpi-grid.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .kpi-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 960px) { .kpi-grid.three { grid-template-columns: 1fr 1fr 1fr; } .kpi-grid.three .value { font-size: 26px !important; } }
+@media (max-width: 640px) { .kpi-grid.three { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .kpi-grid.five { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 960px) { .kpi-grid, .kpi-grid.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
