@@ -26,6 +26,14 @@ Every metric is compared with the previous period of the same length. Date range
 
 **Sibley Financial Group** is already set up with its crest logo (from sfg.onradarcrm.com) and a client login.
 
+## Trends
+
+The **Trends** tab shows the last three years (or however many are entered) of **submitted, paid and chargebacks**. Each year shows its growth rate, its target and how far off target it is. For the current year it uses year-to-date numbers, compares growth on the full-year pace, and spells out **what it takes to hit the targets**: dollars needed per month versus the current pace, and the same gap in connected appointments and appointments set. It also covers appointments per year: appointments set, connected appointments, connected rate and paid production per connect.
+
+Enter and edit the numbers under Admin → client → **Settings → Yearly results & targets**. Sibley's submitted, paid and chargebacks are their reported figures. Their yearly appointment counts and all targets are placeholders to confirm.
+
+The main dashboard also shows **Appointments set** and **Connected rate** (connected ÷ set).
+
 ## Leads and the Typeform quiz
 
 Each client has a **Leads** tab listing every quiz lead: name, phone, email, when they came in, their status (New, Contacted, Appointment set, Appointment held, No show, Application submitted, Sold, Not interested, Bad contact info) and **every quiz answer**. The page checks for new leads every 4 seconds. A new lead slides in with a pop-up, with no page refresh needed. Clients and admins can both update a lead's status.

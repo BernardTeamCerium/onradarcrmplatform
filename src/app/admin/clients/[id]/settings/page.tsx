@@ -9,12 +9,14 @@ import {
   addSpend,
   createUser,
   deleteFigures,
+  deleteYear,
   deleteClient,
   deleteSpend,
   deleteUser,
   removeLogo,
   resetPassword,
   saveFigures,
+  saveYear,
   testConnection,
   updateGhl,
   updateProfile,
@@ -23,6 +25,9 @@ import { requireAdmin } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { usesLiveData } from "@/lib/metrics";
 import { readDb } from "@/lib/store";
+import type { YearRecord } from "@/lib/types";
+
+const BLANK_YEAR: YearRecord = { year: 0, submitted: 0, paid: 0, chargebacks: 0, apptsSet: 0, connectedAppts: 0 };
 
 function maskToken(token: string) {
   return token ? `${token.slice(0, 4)}…${token.slice(-4)}` : "not set";
@@ -219,6 +224,67 @@ export default async function ClientSettings({
             <input type="hidden" name="clientId" value={id} />
             <button className="btn sm" type="submit">Create a new secret</button>
           </form>
+        </section>
+
+        {/* Yearly results */}
+        <section className="card" id="yearly">
+          <div className="card-head">
+            <div>
+              <h2>Yearly results &amp; targets</h2>
+              <p className="muted small">
+                Drives the Trends tab. For the current year, enter year-to-date numbers; growth and &ldquo;what it takes&rdquo; use the full-year pace.
+                Chargebacks target is a limit (lower is better). Leave a target blank to hide it.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/trends`}>Open trends</Link>
+          </div>
+          <div className="stack" style={{ gap: 12 }}>
+            {[...[...client.yearly].sort((a, b) => b.year - a.year), BLANK_YEAR].map((y) => {
+              const isNew = y === BLANK_YEAR;
+              const v = (n?: number) => (n === undefined || isNew ? "" : String(n));
+              return (
+                <details key={isNew ? "new" : y.year} className="year-form">
+                  <summary>
+                    {isNew ? "+ Add a year" : (
+                      <>
+                        <b>{y.year}</b>
+                        <span className="muted small"> · submitted {money(y.submitted)} · paid {money(y.paid)} · chargebacks {money(y.chargebacks)} · {y.connectedAppts} connected</span>
+                      </>
+                    )}
+                  </summary>
+                  <form action={saveYear} className="stack" style={{ gap: 12, marginTop: 12 }}>
+                    <input type="hidden" name="clientId" value={id} />
+                    <input type="hidden" name="originalYear" value={isNew ? "" : y.year} />
+                    <div className="form-grid">
+                      <label className="field">Year<input name="year" type="number" min="2000" max="2100" defaultValue={isNew ? new Date().getUTCFullYear() + 1 : y.year} required /></label>
+                      <label className="field">Submitted ($)<input name="submitted" inputMode="decimal" defaultValue={v(y.submitted)} /></label>
+                      <label className="field">Paid ($)<input name="paid" inputMode="decimal" defaultValue={v(y.paid)} /></label>
+                      <label className="field">Chargebacks ($)<input name="chargebacks" inputMode="decimal" defaultValue={v(y.chargebacks)} /></label>
+                      <label className="field">Appointments set<input name="apptsSet" inputMode="numeric" defaultValue={v(y.apptsSet)} /></label>
+                      <label className="field">Connected appointments<input name="connectedAppts" inputMode="numeric" defaultValue={v(y.connectedAppts)} /></label>
+                    </div>
+                    <div className="form-grid">
+                      <label className="field">Target submitted ($)<input name="targetSubmitted" inputMode="decimal" defaultValue={v(y.targetSubmitted)} /></label>
+                      <label className="field">Target paid ($)<input name="targetPaid" inputMode="decimal" defaultValue={v(y.targetPaid)} /></label>
+                      <label className="field">Chargebacks limit ($)<input name="targetChargebacks" inputMode="decimal" defaultValue={v(y.targetChargebacks)} /></label>
+                      <label className="field">Target appts set<input name="targetApptsSet" inputMode="numeric" defaultValue={v(y.targetApptsSet)} /></label>
+                      <label className="field">Target connected appts<input name="targetConnectedAppts" inputMode="numeric" defaultValue={v(y.targetConnectedAppts)} /></label>
+                    </div>
+                    <div className="form-actions" style={{ marginTop: 0 }}>
+                      <button className="btn primary" type="submit">{isNew ? "Add year" : `Save ${y.year}`}</button>
+                    </div>
+                  </form>
+                  {!isNew && (
+                    <form action={deleteYear} style={{ marginTop: 8 }}>
+                      <input type="hidden" name="clientId" value={id} />
+                      <input type="hidden" name="year" value={y.year} />
+                      <button className="btn sm danger" type="submit">Remove {y.year}</button>
+                    </form>
+                  )}
+                </details>
+              );
+            })}
+          </div>
         </section>
 
         {/* Monthly figures */}

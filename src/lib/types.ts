@@ -25,8 +25,25 @@ export interface MonthlyFigures {
   month: string;
   /** Connected appointments for the month. */
   appointments?: number;
+  /** Appointments set (booked) for the month. */
+  apptsSet?: number;
   /** Premium submitted in the month ($). */
   premium?: number;
+}
+
+export interface YearRecord {
+  year: number;
+  submitted: number;
+  paid: number;
+  chargebacks: number;
+  apptsSet: number;
+  connectedAppts: number;
+  targetSubmitted?: number;
+  targetPaid?: number;
+  /** Maximum acceptable chargebacks for the year (lower is better). */
+  targetChargebacks?: number;
+  targetApptsSet?: number;
+  targetConnectedAppts?: number;
 }
 
 export interface GhlSettings {
@@ -58,6 +75,8 @@ export interface Client {
   primaryAgent?: string;
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
+  /** Yearly production, appointment totals and targets shown on the Trends tab. */
+  yearly: YearRecord[];
   /** Figures entered by hand for a month. They replace sample data for that month. */
   figures: MonthlyFigures[];
   /** When true (or when no API token is set), the dashboard shows generated sample data. */
@@ -72,7 +91,10 @@ export interface Database {
 
 export interface Metrics {
   spend: number;
+  apptsSet: number;
   appointments: number;
+  /** Connected appointments ÷ appointments set. */
+  connectRate: number | null;
   conversations: number;
   leads: number;
   costPerLead: number | null;

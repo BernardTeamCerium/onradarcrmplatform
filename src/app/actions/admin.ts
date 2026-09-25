@@ -54,6 +54,7 @@ export async function createClient(form: FormData) {
       spend: [],
       averagePremium: Number(str(form, "averagePremium")) || 0,
       figures: [],
+      yearly: [],
       typeformSecret: randomSecret(),
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
@@ -194,6 +195,52 @@ export async function deleteFigures(form: FormData) {
   const figId = str(form, "figId");
   await mutateClient(id, (c) => (c.figures = c.figures.filter((f) => f.id !== figId)));
   redirect(settingsPath(id, "Monthly figures removed."));
+}
+
+const YEAR_FIELDS = [
+  "submitted", "paid", "chargebacks", "apptsSet", "connectedAppts",
+  "targetSubmitted", "targetPaid", "targetChargebacks", "targetApptsSet", "targetConnectedAppts",
+] as const;
+
+export async function saveYear(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const year = Number(str(form, "year"));
+  const original = Number(str(form, "originalYear")) || year;
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) redirect(settingsPath(id, "Enter a valid year.") + "#yearly");
+  const record: Record<string, number | undefined> = {};
+  for (const f of YEAR_FIELDS) {
+    const raw = str(form, f).replace(/[$,\s]/g, "");
+    const n = raw === "" ? undefined : Number(raw);
+    if (n !== undefined && (!Number.isFinite(n) || n < 0)) redirect(settingsPath(id, `Check the ${f} value for ${year}.`) + "#yearly");
+    record[f] = n;
+  }
+  await mutateClient(id, (c) => {
+    c.yearly = c.yearly.filter((y) => y.year !== original && y.year !== year);
+    c.yearly.push({
+      year,
+      submitted: record.submitted ?? 0,
+      paid: record.paid ?? 0,
+      chargebacks: record.chargebacks ?? 0,
+      apptsSet: record.apptsSet ?? 0,
+      connectedAppts: record.connectedAppts ?? 0,
+      targetSubmitted: record.targetSubmitted,
+      targetPaid: record.targetPaid,
+      targetChargebacks: record.targetChargebacks,
+      targetApptsSet: record.targetApptsSet,
+      targetConnectedAppts: record.targetConnectedAppts,
+    });
+    c.yearly.sort((a, b) => a.year - b.year);
+  });
+  redirect(settingsPath(id, `${year} saved.`) + "#yearly");
+}
+
+export async function deleteYear(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const year = Number(str(form, "year"));
+  await mutateClient(id, (c) => (c.yearly = c.yearly.filter((y) => y.year !== year)));
+  redirect(settingsPath(id, `${year} removed.`) + "#yearly");
 }
 
 export async function deleteClient(form: FormData) {

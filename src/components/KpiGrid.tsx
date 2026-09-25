@@ -20,8 +20,10 @@ const KPIS: KpiDef[] = [
   { key: "leads", label: "Leads", kind: "count", upIsGood: true, formula: "New contacts" },
   { key: "costPerLead", label: "Cost per lead", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Leads" },
   { key: "conversations", label: "Conversations", kind: "count", upIsGood: true, formula: "New conversations" },
+  { key: "apptsSet", label: "Appointments set", kind: "count", upIsGood: true, formula: "Booked on the calendar" },
   { key: "appointments", label: "Connected appointments", kind: "count", upIsGood: true, formula: "Held, not cancelled or no-show" },
-  { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Appointments" },
+  { key: "connectRate", label: "Connected rate", kind: "percent", upIsGood: true, formula: "Connected ÷ Appointments set" },
+  { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Connected appts" },
   { key: "applicants", label: "Applications submitted", kind: "count", upIsGood: true, formula: "Reached application stage" },
   { key: "salesConversion", label: "Sales conversion", kind: "percent", upIsGood: true, formula: "Sales ÷ Leads" },
 ];
@@ -56,18 +58,18 @@ function Delta({ def, now, prev }: { def: KpiDef; now: number | null; prev: numb
 }
 
 export function KpiGrid({ metrics, previous, agent }: { metrics: Metrics; previous: Metrics; agent?: string }) {
+  const tile = (def: KpiDef) => (
+    <div key={def.key} className={`kpi${def.hero ? " hero" : ""}`}>
+      <div className="label">{def.label}</div>
+      <div className="value" style={def.hero ? { fontSize: 34 } : undefined}>{fmt(def.kind, metrics[def.key])}</div>
+      <Delta def={def} now={metrics[def.key]} prev={previous[def.key]} />
+      {def.formula && <div className="formula">{def.key === "premium" && agent ? `Submitted by ${agent}` : def.formula}</div>}
+    </div>
+  );
   return (
-    <section className="kpi-grid" aria-label="Key metrics">
-      {KPIS.map((def) => (
-        <div key={def.key} className={`kpi${def.hero ? " hero" : ""}`}>
-          <div className="label">{def.label}</div>
-          <div className="value" style={def.hero ? { fontSize: 34 } : undefined}>{fmt(def.kind, metrics[def.key])}</div>
-          <Delta def={def} now={metrics[def.key]} prev={previous[def.key]} />
-          {def.formula && (
-            <div className="formula">{def.key === "premium" && agent ? `Submitted by ${agent}` : def.formula}</div>
-          )}
-        </div>
-      ))}
+    <section className="stack" style={{ gap: 14 }} aria-label="Key metrics">
+      <div className="kpi-grid two">{KPIS.filter((d) => d.hero).map(tile)}</div>
+      <div className="kpi-grid five">{KPIS.filter((d) => !d.hero).map(tile)}</div>
     </section>
   );
 }

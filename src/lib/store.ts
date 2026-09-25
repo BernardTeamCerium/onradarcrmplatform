@@ -2,7 +2,7 @@ import "server-only";
 import { promises as fs } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
-import type { Client, Database, User } from "./types";
+import type { Client, Database, User, YearRecord } from "./types";
 
 /**
  * Storage backend. On Netlify (detected at build time, see next.config.ts) everything lives in
@@ -92,12 +92,29 @@ export function slugify(input: string) {
     .replace(/^-|-$/g, "");
 }
 
+/**
+ * Sibley's production by year. Submitted, paid and chargebacks are Sibley's reported numbers.
+ * Appointment counts and all targets are placeholders to be confirmed and edited in admin.
+ */
+const SIBLEY_YEARLY: YearRecord[] = [
+  { year: 2024, submitted: 29_000_000, paid: 22_000_000, chargebacks: 2_000_000, apptsSet: 540, connectedAppts: 330,
+    targetSubmitted: 30_000_000, targetPaid: 24_000_000, targetChargebacks: 2_000_000, targetApptsSet: 500, targetConnectedAppts: 320 },
+  { year: 2025, submitted: 44_000_000, paid: 32_000_000, chargebacks: 5_000_000, apptsSet: 650, connectedAppts: 420,
+    targetSubmitted: 40_000_000, targetPaid: 30_000_000, targetChargebacks: 3_000_000, targetApptsSet: 600, targetConnectedAppts: 380 },
+  { year: 2026, submitted: 32_000_000, paid: 20_000_000, chargebacks: 3_000_000, apptsSet: 470, connectedAppts: 300,
+    targetSubmitted: 55_000_000, targetPaid: 40_000_000, targetChargebacks: 4_000_000, targetApptsSet: 800, targetConnectedAppts: 520 },
+];
+
 const SIBLEY_SEPTEMBER = { id: "fig_sibley_2026_09", month: "2026-09", appointments: 36, premium: 5_600_000 };
 
 /** Upgrades data saved by older versions of the app (e.g. an already-deployed Netlify site). */
 function migrate(db: Database): { db: Database; changed: boolean } {
   let changed = false;
   for (const c of db.clients as (Client & { averageDealValue?: number })[]) {
+    if (c.yearly === undefined) {
+      c.yearly = c.id === "cl_sibley" ? SIBLEY_YEARLY : [];
+      changed = true;
+    }
     if (c.figures === undefined) {
       c.figures = c.id === "cl_sibley" ? [SIBLEY_SEPTEMBER] : [];
       if (c.id === "cl_sibley") {
@@ -134,6 +151,7 @@ async function seed(): Promise<Database> {
     primaryAgent: "Troy Sibley",
     typeformSecret: randomSecret(),
     figures: [SIBLEY_SEPTEMBER],
+    yearly: SIBLEY_YEARLY,
     demoMode: true,
     createdAt: now,
   };

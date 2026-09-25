@@ -56,6 +56,7 @@ export function dailySpend(client: Client, day: string) {
 
 function derive(base: {
   spend: number;
+  apptsSet: number;
   appointments: number;
   conversations: number;
   leads: number;
@@ -68,6 +69,9 @@ function derive(base: {
     ...base,
     // A conversation is always with a lead, so never report more conversations than leads.
     conversations: Math.min(base.conversations, base.leads),
+    // Every connected appointment was set first.
+    apptsSet: Math.max(base.apptsSet, base.appointments),
+    connectRate: ratio(base.appointments, Math.max(base.apptsSet, base.appointments)),
     costPerLead: ratio(base.spend, base.leads),
     costPerAppointment: ratio(base.spend, base.appointments),
     salesConversion: ratio(base.sales, base.leads),
@@ -146,8 +150,9 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   const spendFor = (ds: string[]) => ds.reduce((sum, d) => sum + dailySpend(client, d), 0);
 
   const leadsByDay = countBy(leadsNow.dates);
-  const apptsByDay = countBy(appts);
-  const apptsIn = (r: { start: Date; end: Date }) => appts.filter((a) => inWindow(a, r)).length;
+  const apptsByDay = countBy(appts.connected);
+  const apptsIn = (r: { start: Date; end: Date }) => appts.connected.filter((a) => inWindow(a, r)).length;
+  const setIn = (r: { start: Date; end: Date }) => appts.set.filter((a) => inWindow(a, r)).length;
 
   const now = oppStats(range);
   const before = oppStats(prev);
@@ -155,6 +160,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   return {
     metrics: derive({
       spend: spendFor(days),
+      apptsSet: setIn(range),
       appointments: apptsIn(range),
       conversations: convNow,
       leads: leadsNow.total,
@@ -164,6 +170,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     }),
     previous: derive({
       spend: spendFor(prevDays),
+      apptsSet: setIn(prev),
       appointments: apptsIn(prev),
       conversations: convPrev,
       leads: leadsPrev.total,
@@ -220,6 +227,7 @@ function binomial(n: number, p: number, rand: () => number) {
 }
 
 interface DemoDay extends DailyPoint {
+  apptsSet: number;
   conversations: number;
   applicants: number;
   sales: number;
@@ -243,7 +251,9 @@ function demoDay(client: Client, date: string): DemoDay {
   const applicants = binomial(appointments, 0.52, rand);
   const sales = binomial(applicants, 0.45, rand);
   const premium = Math.round(applicants * client.averagePremium * (0.6 + rand() * 0.8));
-  return { date, leads, conversations, appointments, applicants, sales, premium, spend };
+  // About 63% of set appointments connect; the rest cancel or no-show. Drawn last so earlier numbers stay put.
+  const apptsSet = appointments + binomial(appointments * 2, 0.29, rand);
+  return { date, leads, conversations, apptsSet, appointments, applicants, sales, premium, spend };
 }
 
 /** Splits an integer total across buckets in proportion to `weights` (largest-remainder rounding). */
@@ -259,7 +269,7 @@ function distribute(total: number, weights: number[]) {
   return out;
 }
 
-const ZERO_DAY = { leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 };
+const ZERO_DAY = { leads: 0, conversations: 0, apptsSet: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 };
 
 /**
  * Sample rows for one month. When the admin has entered figures for that month, the sample is
@@ -274,8 +284,10 @@ function demoMonth(client: Client, month: string, today: string): DemoDay[] {
   const live = rows.filter((r) => r.date <= today);
   if (!fig || live.length === 0) return rows;
 
+  const setBefore = live.reduce((a, r) => a + r.apptsSet, 0);
+  const connectedBefore = live.reduce((a, r) => a + r.appointments, 0);
   if (fig.appointments !== undefined) {
-    const before = live.reduce((a, r) => a + r.appointments, 0);
+    const before = connectedBefore;
     // Spread in proportion to leads so cost per appointment stays steady week to week.
     const appts = distribute(fig.appointments, live.map((r) => r.leads));
     const factor = before > 0 ? fig.appointments / before : 0;
@@ -287,6 +299,13 @@ function demoMonth(client: Client, month: string, today: string): DemoDay[] {
       r.applicants = Math.min(apps[i], appts[i]);
       r.sales = Math.min(sales[i], r.applicants);
     });
+  }
+  if (fig.appointments !== undefined || fig.apptsSet !== undefined) {
+    // Appointments set: the entered number, or the sample's set-to-connected ratio applied to the new total.
+    const connected = live.reduce((a, r) => a + r.appointments, 0);
+    const target = fig.apptsSet ?? (connectedBefore > 0 ? Math.round((connected * setBefore) / connectedBefore) : connected);
+    const extra = distribute(Math.max(0, target - connected), live.map((r) => r.leads));
+    live.forEach((r, i) => (r.apptsSet = r.appointments + extra[i]));
   }
   const premiumWeights = live.map((r) => r.applicants);
   const premium =
@@ -315,13 +334,14 @@ function demoData(client: Client, range: DateRange): DashboardData {
         acc.spend += r.spend;
         acc.leads += r.leads;
         acc.conversations += r.conversations;
+        acc.apptsSet += r.apptsSet;
         acc.appointments += r.appointments;
         acc.applicants += r.applicants;
         acc.sales += r.sales;
         acc.premium += r.premium;
         return acc;
       },
-      { spend: 0, leads: 0, conversations: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 },
+      { spend: 0, leads: 0, conversations: 0, apptsSet: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 },
     );
     return { rows, total };
   };

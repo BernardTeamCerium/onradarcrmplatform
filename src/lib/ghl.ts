@@ -136,14 +136,18 @@ interface GhlEvent {
 
 const EXCLUDED_APPOINTMENT_STATUSES = new Set(["cancelled", "invalid", "noshow"]);
 
-/** Appointment start times across every calendar in the sub-account, excluding cancelled/no-show/invalid. */
+/**
+ * Appointment start times across every calendar in the sub-account.
+ * `set` is every booking except invalid ones; `connected` also excludes cancelled and no-show.
+ */
 export async function appointments(creds: GhlCredentials, start: Date, end: Date) {
   const { calendars } = await request<{ calendars: GhlCalendar[] }>(creds, "/calendars/", {
     version: "2021-04-15",
     query: { locationId: creds.locationId },
   });
   const seen = new Set<string>();
-  const times: string[] = [];
+  const set: string[] = [];
+  const connected: string[] = [];
   for (const cal of calendars ?? []) {
     const { events } = await request<{ events: GhlEvent[] }>(creds, "/calendars/events", {
       version: "2021-04-15",
@@ -157,11 +161,13 @@ export async function appointments(creds: GhlCredentials, start: Date, end: Date
     for (const ev of events ?? []) {
       if (seen.has(ev.id)) continue;
       seen.add(ev.id);
-      if (EXCLUDED_APPOINTMENT_STATUSES.has((ev.appointmentStatus ?? "").toLowerCase())) continue;
-      times.push(ev.startTime);
+      const status = (ev.appointmentStatus ?? "").toLowerCase();
+      if (status === "invalid") continue;
+      set.push(ev.startTime);
+      if (!EXCLUDED_APPOINTMENT_STATUSES.has(status)) connected.push(ev.startTime);
     }
   }
-  return times;
+  return { set, connected };
 }
 
 export interface GhlPipeline {
