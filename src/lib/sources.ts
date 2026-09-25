@@ -15,6 +15,7 @@ const empty = (source: string): SourceRow => ({
   applicants: 0,
   sales: 0,
   premium: 0,
+  cycleDaysSum: 0,
 });
 
 /** Maps a CRM lead-source string to one of the client's marketing sources. */
@@ -51,15 +52,16 @@ export function enteredSpendBySource(client: Client, r: { start: Date; end: Date
  * each step relative to the average. TV and YouTube reach older, higher-intent prospects; purchased and
  * TikTok leads are cheaper but harder to reach.
  */
-const PROFILES: Record<string, { leads: number; spend: number; contact: number; set: number; connect: number; app: number; sale: number; premium: number }> = {
-  tv: { leads: 0.17, spend: 0.27, contact: 1.15, set: 1.2, connect: 1.08, app: 1.2, sale: 1.15, premium: 1.25 },
-  radio: { leads: 0.12, spend: 0.14, contact: 1.05, set: 1.0, connect: 1.02, app: 1.05, sale: 1.0, premium: 1.05 },
-  facebook: { leads: 0.3, spend: 0.23, contact: 0.95, set: 0.95, connect: 0.96, app: 0.9, sale: 0.92, premium: 0.9 },
-  tiktok: { leads: 0.1, spend: 0.06, contact: 0.8, set: 0.72, connect: 0.85, app: 0.7, sale: 0.7, premium: 0.7 },
-  youtube: { leads: 0.12, spend: 0.13, contact: 1.0, set: 1.05, connect: 1.0, app: 1.08, sale: 1.05, premium: 1.1 },
-  "lead seller #1": { leads: 0.19, spend: 0.17, contact: 0.72, set: 0.8, connect: 0.9, app: 0.8, sale: 0.85, premium: 0.85 },
+// `cycle` scales lead-to-application time: TV and YouTube prospects apply faster, bought leads slower.
+const PROFILES: Record<string, { leads: number; spend: number; contact: number; set: number; connect: number; app: number; sale: number; premium: number; cycle: number }> = {
+  tv: { leads: 0.17, spend: 0.27, contact: 1.15, set: 1.2, connect: 1.08, app: 1.2, sale: 1.15, premium: 1.25, cycle: 0.82 },
+  radio: { leads: 0.12, spend: 0.14, contact: 1.05, set: 1.0, connect: 1.02, app: 1.05, sale: 1.0, premium: 1.05, cycle: 0.95 },
+  facebook: { leads: 0.3, spend: 0.23, contact: 0.95, set: 0.95, connect: 0.96, app: 0.9, sale: 0.92, premium: 0.9, cycle: 1.05 },
+  tiktok: { leads: 0.1, spend: 0.06, contact: 0.8, set: 0.72, connect: 0.85, app: 0.7, sale: 0.7, premium: 0.7, cycle: 1.2 },
+  youtube: { leads: 0.12, spend: 0.13, contact: 1.0, set: 1.05, connect: 1.0, app: 1.08, sale: 1.05, premium: 1.1, cycle: 0.9 },
+  "lead seller #1": { leads: 0.19, spend: 0.17, contact: 0.72, set: 0.8, connect: 0.9, app: 0.8, sale: 0.85, premium: 0.85, cycle: 1.35 },
 };
-const DEFAULT_PROFILE = { leads: 0.1, spend: 0.1, contact: 1, set: 1, connect: 1, app: 1, sale: 1, premium: 1 };
+const DEFAULT_PROFILE = { leads: 0.1, spend: 0.1, contact: 1, set: 1, connect: 1, app: 1, sale: 1, premium: 1, cycle: 1 };
 const profile = (name: string) => PROFILES[name.toLowerCase()] ?? DEFAULT_PROFILE;
 
 /** Integer split of `total` in proportion to `weights` (largest remainder). */
@@ -104,6 +106,10 @@ export function sampleBySource(client: Client, m: Metrics, r: { start: Date; end
   const apps = splitCapped(m.applicants, p.map((x, i) => connected[i] * x.app), connected);
   const sales = splitCapped(m.sales, p.map((x, i) => apps[i] * x.sale), apps);
   const premium = split(Math.round(m.premium), p.map((x, i) => apps[i] * x.premium));
+  // Share the period's total cycle days so each source's average reflects its profile and the overall average holds.
+  const cycleWeights = p.map((x, i) => apps[i] * x.cycle);
+  const cycleTotal = cycleWeights.reduce((a, b) => a + b, 0);
+  const cycle = cycleWeights.map((w) => (cycleTotal > 0 ? (m.cycleDaysSum * w) / cycleTotal : 0));
 
   const entered = enteredSpendBySource(client, r);
   const spend = client.spend.length > 0 ? names.map((n) => entered.get(n) ?? 0) : split(Math.round(m.spend), p.map((x) => x.spend));
@@ -118,6 +124,7 @@ export function sampleBySource(client: Client, m: Metrics, r: { start: Date; end
     applicants: apps[i],
     sales: sales[i],
     premium: premium[i],
+    cycleDaysSum: cycle[i],
   }));
   const unassigned = client.spend.length > 0 ? entered.get(UNASSIGNED) ?? 0 : 0;
   if (unassigned > 0) rows.push({ ...empty(UNASSIGNED), spend: unassigned });
@@ -133,7 +140,7 @@ export function liveBySource(
     conversations: { source: string; weight: number }[];
     apptsSet: string[];
     connected: string[];
-    applicants: { source: string; premium: number }[];
+    applicants: { source: string; premium: number; cycleDays: number }[];
     sales: string[];
   },
 ): SourceRow[] {
@@ -150,6 +157,7 @@ export function liveBySource(
     const x = row(a.source);
     x.applicants++;
     x.premium += a.premium;
+    x.cycleDaysSum += a.cycleDays;
   });
   data.sales.forEach((s) => row(s).sales++);
   for (const [name, amount] of enteredSpendBySource(client, r)) row(name).spend += amount;

@@ -1,7 +1,7 @@
 import { count, money, percent } from "@/lib/format";
 import type { Metrics } from "@/lib/types";
 
-type Kind = "money" | "money2" | "count" | "percent";
+type Kind = "money" | "money2" | "count" | "percent" | "days";
 
 interface KpiDef {
   key: keyof Metrics;
@@ -23,12 +23,15 @@ const KPIS: KpiDef[] = [
   { key: "apptsSet", label: "Appointments set", kind: "count", upIsGood: true, formula: "Booked on the calendar" },
   { key: "appointments", label: "Connected appointments", kind: "count", upIsGood: true, formula: "Held, not cancelled or no-show" },
   { key: "connectRate", label: "Connected rate", kind: "percent", upIsGood: true, formula: "Connected ÷ Appointments set" },
+  { key: "connectedPct", label: "Connected appt %", kind: "percent", upIsGood: true, formula: "Connected appts ÷ Leads" },
   { key: "costPerAppointment", label: "Cost per appointment", kind: "money2", upIsGood: false, formula: "Marketing spend ÷ Connected appts" },
   { key: "applicants", label: "Applications submitted", kind: "count", upIsGood: true, formula: "Reached application stage" },
+  { key: "cycleDays", label: "Avg. cycle time to application", kind: "days", upIsGood: false, formula: "Days from lead to application" },
   { key: "salesConversion", label: "Sales conversion", kind: "percent", upIsGood: true, formula: "Sales ÷ Leads" },
 ];
 
 function fmt(kind: Kind, v: number | null) {
+  if (kind === "days") return v === null ? "—" : `${v.toFixed(1)} days`;
   if (kind === "money") return money(v);
   if (kind === "money2") return money(v, true);
   if (kind === "percent") return percent(v, v !== null && Math.abs(v) >= 1 ? 0 : 1);
@@ -69,7 +72,7 @@ export function KpiGrid({ metrics, previous, agent }: { metrics: Metrics; previo
   return (
     <section className="stack" style={{ gap: 14 }} aria-label="Key metrics">
       <div className="kpi-grid two">{KPIS.filter((d) => d.hero).map(tile)}</div>
-      <div className="kpi-grid five">{KPIS.filter((d) => !d.hero).map(tile)}</div>
+      <div className="kpi-grid">{KPIS.filter((d) => !d.hero).map(tile)}</div>
     </section>
   );
 }

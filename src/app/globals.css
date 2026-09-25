@@ -298,3 +298,6 @@ tbody tr.group-row:hover { background: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 table.compact th { white-space: normal; letter-spacing: 0.02em; vertical-align: bottom; line-height: 1.25; padding: 8px 10px; }
 table.compact td { padding: 10px; }
+table.compact td:first-child, table.compact th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+table.compact tr:last-child td:first-child { background: var(--surface-2); }
+table.compact th, table.compact td { padding-left: 8px; padding-right: 8px; }

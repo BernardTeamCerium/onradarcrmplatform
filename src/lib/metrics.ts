@@ -64,6 +64,7 @@ function derive(base: {
   sales: number;
   applicants: number;
   premium: number;
+  cycleDaysSum: number;
 }): Metrics {
   const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
   return {
@@ -76,6 +77,8 @@ function derive(base: {
     costPerLead: ratio(base.spend, base.leads),
     costPerAppointment: ratio(base.spend, base.appointments),
     salesConversion: ratio(base.sales, base.leads),
+    cycleDays: ratio(base.cycleDaysSum, base.applicants),
+    connectedPct: ratio(base.appointments, base.leads),
     estimatedReturn: base.spend > 0 ? (base.premium - base.spend) / base.spend : null,
   };
 }
@@ -100,6 +103,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   ]);
 
   // Attribute records to marketing sources through the contact's lead source.
+  const contactAdded = new Map(leadsNow.contacts.map((c) => [c.id, c.dateAdded]));
   const contactSource = new Map(leadsNow.contacts.map((c) => [c.id, matchSource(client, c.source)]));
   const sourceOf = (contactId?: string, fallback?: string) =>
     (contactId && contactSource.get(contactId)) || matchSource(client, fallback);
@@ -137,7 +141,8 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     let sales = 0;
     let premium = 0;
     let applicants = 0;
-    const appSources: { source: string; premium: number }[] = [];
+    let cycleDaysSum = 0;
+    const appSources: { source: string; premium: number; cycleDays: number }[] = [];
     const saleSources: string[] = [];
     for (const o of opps) {
       if (o.status === "won" && inWindow(o.lastStatusChangeAt ?? o.updatedAt, r)) {
@@ -151,10 +156,15 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
         applicants++;
         const value = o.monetaryValue && o.monetaryValue > 0 ? o.monetaryValue : client.averagePremium;
         premium += value;
-        appSources.push({ source: sourceOf(o.contactId, o.source), premium: value });
+        // Cycle time: from when the lead came in (contact date if we have it, else the opportunity's) to the application.
+        const appliedAt = new Date(o.lastStageChangeAt ?? o.createdAt).getTime();
+        const leadAt = new Date((o.contactId && contactAdded.get(o.contactId)) || o.createdAt).getTime();
+        const days = Math.max(0, (appliedAt - leadAt) / 86_400_000);
+        cycleDaysSum += days;
+        appSources.push({ source: sourceOf(o.contactId, o.source), premium: value, cycleDays: days });
       }
     }
-    return { sales, premium, applicants, appSources, saleSources };
+    return { sales, premium, applicants, cycleDaysSum, appSources, saleSources };
   };
 
   const days = eachDay(range);
@@ -189,6 +199,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       sales: now.sales,
       applicants: now.applicants,
       premium: now.premium,
+      cycleDaysSum: now.cycleDaysSum,
     }),
     previous: derive({
       spend: spendFor(prevDays),
@@ -199,6 +210,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       sales: before.sales,
       applicants: before.applicants,
       premium: before.premium,
+      cycleDaysSum: before.cycleDaysSum,
     }),
     daily: days.map((d) => ({
       date: d,
@@ -250,6 +262,8 @@ function binomial(n: number, p: number, rand: () => number) {
 }
 
 interface DemoDay extends DailyPoint {
+  /** Average lead-to-application days for applications submitted this day. */
+  cycle: number;
   apptsSet: number;
   conversations: number;
   applicants: number;
@@ -276,7 +290,9 @@ function demoDay(client: Client, date: string): DemoDay {
   const premium = Math.round(applicants * client.averagePremium * (0.6 + rand() * 0.8));
   // About 63% of set appointments connect; the rest cancel or no-show. Drawn last so earlier numbers stay put.
   const apptsSet = appointments + binomial(appointments * 2, 0.29, rand);
-  return { date, leads, conversations, apptsSet, appointments, applicants, sales, premium, spend };
+  // Typical lead-to-application time: about 9 to 17 days.
+  const cycle = 9 + rand() * 8;
+  return { date, leads, conversations, apptsSet, appointments, applicants, sales, premium, spend, cycle };
 }
 
 /** Splits an integer total across buckets in proportion to `weights` (largest-remainder rounding). */
@@ -362,9 +378,10 @@ function demoData(client: Client, range: DateRange): DashboardData {
         acc.applicants += r.applicants;
         acc.sales += r.sales;
         acc.premium += r.premium;
+        acc.cycleDaysSum += r.applicants * r.cycle;
         return acc;
       },
-      { spend: 0, leads: 0, conversations: 0, apptsSet: 0, appointments: 0, applicants: 0, sales: 0, premium: 0 },
+      { spend: 0, leads: 0, conversations: 0, apptsSet: 0, appointments: 0, applicants: 0, sales: 0, premium: 0, cycleDaysSum: 0 },
     );
     return { rows, total };
   };

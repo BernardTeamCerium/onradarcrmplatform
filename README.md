@@ -41,7 +41,7 @@ The **Trends** tab shows the last three years (or however many are entered) of *
 
 Enter and edit the numbers under Admin → client → **Settings → Yearly results & targets**. Sibley's submitted, paid and chargebacks are their reported figures. Their yearly appointment counts and all targets are placeholders to confirm.
 
-The main dashboard also shows **Appointments set** and **Connected rate** (connected ÷ set).
+The main dashboard also shows **Appointments set**, **Connected rate** (connected ÷ appointments set), **Connected appt %** (connected ÷ leads) and **Avg. cycle time to application** (days from a lead coming in to their application). The last two also appear per source on the Marketing tab.
 
 ## Leads and the Typeform quiz
 

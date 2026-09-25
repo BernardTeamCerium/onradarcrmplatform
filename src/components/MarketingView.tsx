@@ -14,6 +14,8 @@ function derived(r: SourceRow) {
     cpl: spent ? ratio(r.spend, r.leads) : null,
     contactRate: ratio(r.conversations, r.leads),
     connectRate: ratio(r.connected, r.apptsSet),
+    connectedPct: ratio(r.connected, r.leads),
+    cycleDays: ratio(r.cycleDaysSum, r.applicants),
     costPerConnected: spent ? ratio(r.spend, r.connected) : null,
     salesConversion: ratio(r.sales, r.leads),
   };
@@ -33,8 +35,9 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
       applicants: t.applicants + r.applicants,
       sales: t.sales + r.sales,
       premium: t.premium + r.premium,
+      cycleDaysSum: t.cycleDaysSum + r.cycleDaysSum,
     }),
-    { source: "Total", spend: 0, leads: 0, conversations: 0, apptsSet: 0, connected: 0, applicants: 0, sales: 0, premium: 0 },
+    { source: "Total", spend: 0, leads: 0, conversations: 0, apptsSet: 0, connected: 0, applicants: 0, sales: 0, premium: 0, cycleDaysSum: 0 },
   );
   const withLeads = rows.filter((r) => r.leads > 0);
   const best = (fn: (r: SourceRow) => number | null, lower: boolean) =>
@@ -46,6 +49,7 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
   const bestCpc = best((r) => derived(r).costPerConnected, true);
   const bestConv = best((r) => derived(r).salesConversion, false);
   const mostLeads = best((r) => r.leads, false);
+  const bestCycle = best((r) => derived(r).cycleDays, true);
   const lastDay = new Date(range.end.getTime() - 86_400_000).toISOString().slice(0, 10);
 
   const metric = (key: string, label: string, fn: (r: SourceRow) => number | null, fmt: (v: number | null) => string, lowerIsBetter = false) => ({
@@ -58,6 +62,7 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
     }),
   });
   const pct = (v: number | null) => percent(v, 0);
+  const days = (v: number | null) => (v === null ? "—" : `${v.toFixed(1)} days`);
 
   return (
     <div className="stack">
@@ -69,12 +74,13 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
         </span>
       </div>
 
-      <section className="kpi-grid" aria-label="Source highlights">
+      <section className="kpi-grid five" aria-label="Source highlights">
         {[
           { label: "Most leads", hit: mostLeads, fmt: (v: number) => `${count(v)} leads` },
           { label: "Lowest cost per lead", hit: bestCpl, fmt: (v: number) => money(v, true) },
           { label: "Lowest cost per connected appt", hit: bestCpc, fmt: (v: number) => money(v, true) },
           { label: "Best sales conversion", hit: bestConv, fmt: (v: number) => percent(v, 1) },
+          { label: "Fastest to application", hit: bestCycle, fmt: (v: number) => `${v.toFixed(1)} days on average` },
         ].map((t) => (
           <div className="kpi" key={t.label}>
             <div className="label">{t.label}</div>
@@ -99,8 +105,10 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
             metric("contact", "Contact rate", (r) => derived(r).contactRate, pct),
             metric("set", "Appts set", (r) => r.apptsSet, (v) => count(v ?? 0)),
             metric("connected", "Connected appts", (r) => r.connected, (v) => count(v ?? 0)),
+            metric("connPct", "Connected appt %", (r) => derived(r).connectedPct, pct),
             metric("cpc", "Cost per connected appt", (r) => derived(r).costPerConnected, (v) => money(v, true), true),
             metric("apps", "Applications", (r) => r.applicants, (v) => count(v ?? 0)),
+            metric("cycle", "Cycle time to application", (r) => derived(r).cycleDays, days, true),
             metric("conv", "Sales conversion", (r) => derived(r).salesConversion, (v) => percent(v, 1)),
           ]}
         />
@@ -110,7 +118,8 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
         <div style={{ padding: "20px 20px 0" }}>
           <h2>Results by source</h2>
           <p className="muted small">
-            Contact rate = conversations ÷ leads. Sales conversion = sales ÷ leads. Rows add up to the Dashboard totals for the same dates.
+            Contact rate = conversations ÷ leads. Conn. rate = connected ÷ appts set. Conn. appt % = connected ÷ leads. Days to app =
+            average days from lead to application. Sales conv. = sales ÷ leads. Rows add up to the Dashboard totals for the same dates.
           </p>
         </div>
         <div className="table-wrap" style={{ marginTop: 12 }}>
@@ -121,13 +130,15 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
                 <th className="num">Spend</th>
                 <th className="num">Leads</th>
                 <th className="num">Cost / lead</th>
-                <th className="num">Conversations</th>
+                <th className="num">Convos</th>
                 <th className="num">Contact rate</th>
                 <th className="num">Appts set</th>
-                <th className="num">Connected</th>
-                <th className="num">Connected rate</th>
-                <th className="num">Cost / connected</th>
-                <th className="num">Applications</th>
+                <th className="num">Conn. appts</th>
+                <th className="num">Conn. rate</th>
+                <th className="num">Conn. appt %</th>
+                <th className="num">Cost / conn. appt</th>
+                <th className="num">Apps</th>
+                <th className="num">Days to app</th>
                 <th className="num">Sales conv.</th>
               </tr>
             </thead>
@@ -146,8 +157,10 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
                     <td className="num">{count(r.apptsSet)}</td>
                     <td className="num">{count(r.connected)}</td>
                     <td className="num">{percent(d.connectRate, 0)}</td>
+                    <td className="num">{percent(d.connectedPct, 0)}</td>
                     <td className="num">{money(d.costPerConnected, true)}</td>
                     <td className="num">{count(r.applicants)}</td>
+                    <td className="num">{d.cycleDays === null ? "—" : d.cycleDays.toFixed(1)}</td>
                     <td className="num">{percent(d.salesConversion, 1)}</td>
                   </tr>
                 );

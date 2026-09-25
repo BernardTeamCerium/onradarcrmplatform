@@ -38,6 +38,8 @@ export interface SourceRow {
   applicants: number;
   sales: number;
   premium: number;
+  /** Sum of days from lead to application across this source's applications (÷ applicants = average). */
+  cycleDaysSum: number;
 }
 
 export interface MonthlyFigures {
@@ -118,6 +120,8 @@ export interface Metrics {
   appointments: number;
   /** Connected appointments ÷ appointments set. */
   connectRate: number | null;
+  /** Connected appointments ÷ leads: share of leads who reached a connected appointment. */
+  connectedPct: number | null;
   conversations: number;
   leads: number;
   costPerLead: number | null;
@@ -127,6 +131,10 @@ export interface Metrics {
   applicants: number;
   /** Premium submitted on applications in the period ($). */
   premium: number;
+  /** Sum of lead-to-application days over the period's applications. */
+  cycleDaysSum: number;
+  /** Average days from a lead coming in to their application being submitted. */
+  cycleDays: number | null;
   estimatedReturn: number | null;
 }
 
