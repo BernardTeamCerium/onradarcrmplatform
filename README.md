@@ -26,6 +26,15 @@ Every metric is compared with the previous period of the same length. Date range
 
 **Sibley Financial Group** is already set up with its crest logo (from sfg.onradarcrm.com) and a client login.
 
+## Marketing
+
+The **Marketing** tab breaks each date range down by source (TV, Radio, Facebook, TikTok, YouTube and Lead Seller #1 by default). For each source it shows marketing spend, leads, cost per lead, conversations, contact rate (conversations ÷ leads), appointments set, connected appointments, connected rate, cost per connected appointment, applications and sales conversion. It also highlights the best source on each measure and has a chart that ranks the sources by whichever measure you pick. The rows add up to the Dashboard totals.
+
+- **Sources:** Admin → client → **Settings → Marketing sources**. Keywords match the lead source recorded in the CRM.
+- **Spend by source:** choose the source when adding marketing spend. Spend without a source shows as "Unassigned spend".
+- **With live CRM data:** leads are attributed by the contact's source. Appointments, applications and sales follow their lead, and anything unmatched shows as "Other / unknown".
+- **With sample data:** each source has a realistic profile.
+
 ## Trends
 
 The **Trends** tab shows the last three years (or however many are entered) of **submitted, paid and chargebacks**. Each year shows its growth rate, its target and how far off target it is. For the current year it uses year-to-date numbers, compares growth on the full-year pace, and spells out **what it takes to hit the targets**: dollars needed per month versus the current pace, and the same gap in connected appointments and appointments set. It also covers appointments per year: appointments set, connected appointments, connected rate and paid production per connect.

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
 import { clearMetricsCache } from "@/lib/metrics";
-import { deleteLogo, getClient, newId, randomSecret, slugify, updateDb, writeLogo } from "@/lib/store";
+import { DEFAULT_SOURCES, deleteLogo, getClient, newId, randomSecret, slugify, updateDb, writeLogo } from "@/lib/store";
 import type { Client, Role } from "@/lib/types";
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
@@ -55,6 +55,7 @@ export async function createClient(form: FormData) {
       averagePremium: Number(str(form, "averagePremium")) || 0,
       figures: [],
       yearly: [],
+      sources: DEFAULT_SOURCES,
       typeformSecret: randomSecret(),
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
@@ -153,7 +154,7 @@ export async function addSpend(form: FormData) {
     redirect(settingsPath(id, "Enter a month and a marketing spend amount of 0 or more."));
   }
   await mutateClient(id, (c) => {
-    c.spend.push({ id: newId("sp"), month, amount, note: str(form, "note") || undefined });
+    c.spend.push({ id: newId("sp"), month, amount, note: str(form, "note") || undefined, source: str(form, "source") || undefined });
     c.spend.sort((a, b) => b.month.localeCompare(a.month));
   });
   redirect(settingsPath(id, "Marketing spend added."));
@@ -241,6 +242,24 @@ export async function deleteYear(form: FormData) {
   const year = Number(str(form, "year"));
   await mutateClient(id, (c) => (c.yearly = c.yearly.filter((y) => y.year !== year)));
   redirect(settingsPath(id, `${year} removed.`) + "#yearly");
+}
+
+export async function saveSources(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const names = form.getAll("name").map((v) => String(v).trim());
+  const matches = form.getAll("match").map((v) => String(v));
+  const seen = new Set<string>();
+  const sources = names
+    .map((name, i) => ({
+      name,
+      match: (matches[i] ?? "").split(",").map((k) => k.trim().toLowerCase()).filter(Boolean),
+    }))
+    .filter((src) => src.name && !seen.has(src.name.toLowerCase()) && seen.add(src.name.toLowerCase()));
+  await mutateClient(id, (c) => {
+    c.sources = sources.map((src) => ({ name: src.name, match: src.match.length ? src.match : [src.name.toLowerCase()] }));
+  });
+  redirect(settingsPath(id, "Marketing sources saved.") + "#sources");
 }
 
 export async function deleteClient(form: FormData) {

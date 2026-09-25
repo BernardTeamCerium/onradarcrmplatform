@@ -1,6 +1,7 @@
 import "server-only";
 import * as ghl from "./ghl";
 import { dayKey, eachDay, previousRange, type DateRange } from "./ranges";
+import { liveBySource, matchSource, sampleBySource } from "./sources";
 import type { Client, DailyPoint, DashboardData, Metrics } from "./types";
 
 const CACHE_TTL_MS = 5 * 60_000;
@@ -87,7 +88,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   const prev = previousRange(range);
   const warnings: string[] = [];
 
-  const [leadsNow, leadsPrev, convNow, convPrev, appts, pipes, opps] = await Promise.all([
+  const [leadsNow, leadsPrev, convNow, convPrev, appts, pipes, opps, convSample] = await Promise.all([
     ghl.contactsCreated(creds, range.start, range.end, { withDates: true }),
     ghl.contactsCreated(creds, prev.start, prev.end, { withDates: false }),
     ghl.conversationsStarted(creds, range.start, range.end),
@@ -95,7 +96,13 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     ghl.appointments(creds, prev.start, range.end),
     ghl.pipelines(creds),
     ghl.opportunitiesSince(creds, prev.start),
+    ghl.conversationContacts(creds, range.start, range.end),
   ]);
+
+  // Attribute records to marketing sources through the contact's lead source.
+  const contactSource = new Map(leadsNow.contacts.map((c) => [c.id, matchSource(client, c.source)]));
+  const sourceOf = (contactId?: string, fallback?: string) =>
+    (contactId && contactSource.get(contactId)) || matchSource(client, fallback);
 
   if (leadsNow.dates.length < leadsNow.total) {
     warnings.push("Daily lead trend is based on the most recent 5,000 contacts in this period.");
@@ -130,19 +137,24 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     let sales = 0;
     let premium = 0;
     let applicants = 0;
+    const appSources: { source: string; premium: number }[] = [];
+    const saleSources: string[] = [];
     for (const o of opps) {
       if (o.status === "won" && inWindow(o.lastStatusChangeAt ?? o.updatedAt, r)) {
         sales++;
+        saleSources.push(sourceOf(o.contactId, o.source));
       }
       const appIdx = appStageIndex.get(o.pipelineId);
       const reachedApp =
         o.status === "won" || (appIdx !== undefined && (stageIndex.get(o.pipelineStageId) ?? -1) >= appIdx);
       if (reachedApp && inWindow(o.lastStageChangeAt ?? o.createdAt, r)) {
         applicants++;
-        premium += o.monetaryValue && o.monetaryValue > 0 ? o.monetaryValue : client.averagePremium;
+        const value = o.monetaryValue && o.monetaryValue > 0 ? o.monetaryValue : client.averagePremium;
+        premium += value;
+        appSources.push({ source: sourceOf(o.contactId, o.source), premium: value });
       }
     }
-    return { sales, premium, applicants };
+    return { sales, premium, applicants, appSources, saleSources };
   };
 
   const days = eachDay(range);
@@ -156,6 +168,16 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
 
   const now = oppStats(range);
   const before = oppStats(prev);
+  const current = appts.bookings.filter((b) => inWindow(b.startTime, range));
+  const convWeight = convSample.contactIds.length > 0 ? convNow / convSample.contactIds.length : 0;
+  const bySource = liveBySource(client, range, {
+    leads: leadsNow.contacts.map((c) => matchSource(client, c.source)),
+    conversations: convSample.contactIds.map((id) => ({ source: sourceOf(id), weight: convWeight })),
+    apptsSet: current.map((b) => sourceOf(b.contactId)),
+    connected: current.filter((b) => b.connected).map((b) => sourceOf(b.contactId)),
+    applicants: now.appSources,
+    sales: now.saleSources,
+  });
 
   return {
     metrics: derive({
@@ -184,6 +206,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       appointments: apptsByDay.get(d) ?? 0,
       spend: dailySpend(client, d),
     })),
+    bySource,
     source: "ghl",
     fetchedAt: new Date().toISOString(),
     warnings,
@@ -347,8 +370,10 @@ function demoData(client: Client, range: DateRange): DashboardData {
   };
   const now = sum(range);
   const before = sum(previousRange(range));
+  const metrics = derive(now.total);
   return {
-    metrics: derive(now.total),
+    metrics,
+    bySource: sampleBySource(client, { ...metrics, spend: now.total.spend }, range),
     previous: derive(before.total),
     daily: now.rows.map(({ date, leads, appointments, spend }) => ({ date, leads, appointments, spend })),
     source: "demo",

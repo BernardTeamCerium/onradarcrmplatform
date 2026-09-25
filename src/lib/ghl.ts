@@ -67,8 +67,14 @@ export async function getLocation(creds: GhlCredentials) {
 }
 
 interface ContactSearchResponse {
-  contacts: { id: string; dateAdded: string }[];
+  contacts: { id: string; dateAdded: string; source?: string; attributionSource?: { utmSource?: string; medium?: string } }[];
   total: number;
+}
+
+export interface CrmContact {
+  id: string;
+  dateAdded: string;
+  source: string;
 }
 
 /** Contacts created in [start, end). Returns the total plus creation dates (capped) for the daily trend. */
@@ -81,6 +87,7 @@ export async function contactsCreated(
   const pageLimit = opts.withDates ? 100 : 1;
   const maxPages = opts.withDates ? (opts.maxPages ?? 50) : 1;
   const dates: string[] = [];
+  const contacts: CrmContact[] = [];
   let total = 0;
   for (let page = 1; page <= maxPages; page++) {
     const data = await request<ContactSearchResponse>(creds, "/contacts/search", {
@@ -102,11 +109,14 @@ export async function contactsCreated(
     total = data.total ?? total;
     for (const c of data.contacts ?? []) {
       const t = new Date(c.dateAdded).getTime();
-      if (t >= start.getTime() && t < end.getTime()) dates.push(c.dateAdded);
+      if (t >= start.getTime() && t < end.getTime()) {
+        dates.push(c.dateAdded);
+        contacts.push({ id: c.id, dateAdded: c.dateAdded, source: c.source || c.attributionSource?.utmSource || "" });
+      }
     }
     if (!opts.withDates || (data.contacts ?? []).length < pageLimit) break;
   }
-  return { total: Math.max(total, dates.length), dates };
+  return { total: Math.max(total, dates.length), dates, contacts };
 }
 
 /** Conversations started (dateAdded) in [start, end). */
@@ -123,6 +133,15 @@ export async function conversationsStarted(creds: GhlCredentials, start: Date, e
   return data.total ?? 0;
 }
 
+/** Up to 100 of the conversations started in [start, end), for attributing conversations to sources. */
+export async function conversationContacts(creds: GhlCredentials, start: Date, end: Date) {
+  const data = await request<{ conversations: { contactId: string }[]; total: number }>(creds, "/conversations/search", {
+    version: "2021-04-15",
+    query: { locationId: creds.locationId, startDate: start.getTime(), endDate: end.getTime() - 1, limit: 100 },
+  });
+  return { contactIds: (data.conversations ?? []).map((c) => c.contactId), total: data.total ?? 0 };
+}
+
 interface GhlCalendar {
   id: string;
   name: string;
@@ -130,6 +149,7 @@ interface GhlCalendar {
 
 interface GhlEvent {
   id: string;
+  contactId?: string;
   startTime: string;
   appointmentStatus?: string;
 }
@@ -148,6 +168,7 @@ export async function appointments(creds: GhlCredentials, start: Date, end: Date
   const seen = new Set<string>();
   const set: string[] = [];
   const connected: string[] = [];
+  const bookings: { startTime: string; contactId?: string; connected: boolean }[] = [];
   for (const cal of calendars ?? []) {
     const { events } = await request<{ events: GhlEvent[] }>(creds, "/calendars/events", {
       version: "2021-04-15",
@@ -164,10 +185,12 @@ export async function appointments(creds: GhlCredentials, start: Date, end: Date
       const status = (ev.appointmentStatus ?? "").toLowerCase();
       if (status === "invalid") continue;
       set.push(ev.startTime);
-      if (!EXCLUDED_APPOINTMENT_STATUSES.has(status)) connected.push(ev.startTime);
+      const isConnected = !EXCLUDED_APPOINTMENT_STATUSES.has(status);
+      if (isConnected) connected.push(ev.startTime);
+      bookings.push({ startTime: ev.startTime, contactId: ev.contactId, connected: isConnected });
     }
   }
-  return { set, connected };
+  return { set, connected, bookings };
 }
 
 export interface GhlPipeline {
@@ -186,6 +209,8 @@ export async function pipelines(creds: GhlCredentials) {
 
 export interface GhlOpportunity {
   id: string;
+  contactId?: string;
+  source?: string;
   monetaryValue?: number;
   pipelineId: string;
   pipelineStageId: string;

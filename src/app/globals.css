@@ -295,3 +295,6 @@ tbody tr.group-row:hover { background: none; }
 .plan li::marker { color: var(--accent); }
 .year-form { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
 .year-form summary { cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+table.compact th { white-space: normal; letter-spacing: 0.02em; vertical-align: bottom; line-height: 1.25; padding: 8px 10px; }
+table.compact td { padding: 10px; }

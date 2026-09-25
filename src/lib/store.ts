@@ -2,7 +2,7 @@ import "server-only";
 import { promises as fs } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
-import type { Client, Database, User, YearRecord } from "./types";
+import type { Client, Database, MarketingSource, User, YearRecord } from "./types";
 
 /**
  * Storage backend. On Netlify (detected at build time, see next.config.ts) everything lives in
@@ -105,12 +105,25 @@ const SIBLEY_YEARLY: YearRecord[] = [
     targetSubmitted: 55_000_000, targetPaid: 40_000_000, targetChargebacks: 4_000_000, targetApptsSet: 800, targetConnectedAppts: 520 },
 ];
 
+export const DEFAULT_SOURCES: MarketingSource[] = [
+  { name: "TV", match: ["tv", "television"] },
+  { name: "Radio", match: ["radio"] },
+  { name: "Facebook", match: ["facebook", "fb", "meta", "instagram"] },
+  { name: "TikTok", match: ["tiktok", "tik tok"] },
+  { name: "YouTube", match: ["youtube", "yt"] },
+  { name: "Lead Seller #1", match: ["lead seller #1", "lead seller 1", "lead seller"] },
+];
+
 const SIBLEY_SEPTEMBER = { id: "fig_sibley_2026_09", month: "2026-09", appointments: 36, premium: 5_600_000 };
 
 /** Upgrades data saved by older versions of the app (e.g. an already-deployed Netlify site). */
 function migrate(db: Database): { db: Database; changed: boolean } {
   let changed = false;
   for (const c of db.clients as (Client & { averageDealValue?: number })[]) {
+    if (c.sources === undefined) {
+      c.sources = DEFAULT_SOURCES;
+      changed = true;
+    }
     if (c.yearly === undefined) {
       c.yearly = c.id === "cl_sibley" ? SIBLEY_YEARLY : [];
       changed = true;
@@ -152,6 +165,7 @@ async function seed(): Promise<Database> {
     typeformSecret: randomSecret(),
     figures: [SIBLEY_SEPTEMBER],
     yearly: SIBLEY_YEARLY,
+    sources: DEFAULT_SOURCES,
     demoMode: true,
     createdAt: now,
   };

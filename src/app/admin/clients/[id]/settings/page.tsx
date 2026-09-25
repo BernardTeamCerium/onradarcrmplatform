@@ -16,6 +16,7 @@ import {
   removeLogo,
   resetPassword,
   saveFigures,
+  saveSources,
   saveYear,
   testConnection,
   updateGhl,
@@ -149,6 +150,36 @@ export default async function ClientSettings({
           </form>
         </section>
 
+        {/* Marketing sources */}
+        <section className="card" id="sources">
+          <div className="card-head">
+            <div>
+              <h2>Marketing sources</h2>
+              <p className="muted small">
+                The sources on the Marketing tab, in order. Keywords match the lead source recorded in the CRM (for example
+                &ldquo;fb, instagram&rdquo; for Facebook). Clear a name to remove a source.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/marketing`}>Open marketing</Link>
+          </div>
+          <form action={saveSources} className="stack" style={{ gap: 8 }}>
+            <input type="hidden" name="clientId" value={id} />
+            {[...client.sources, { name: "", match: [] }, { name: "", match: [] }].map((src, i) => (
+              <div className="form-grid" key={i} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)" }}>
+                <label className="field">
+                  {i === 0 ? "Source name" : <span className="sr-only">Source name</span>}
+                  <input name="name" defaultValue={src.name} placeholder={i >= client.sources.length ? "Add a source" : undefined} />
+                </label>
+                <label className="field">
+                  {i === 0 ? "CRM source keywords" : <span className="sr-only">CRM source keywords</span>}
+                  <input name="match" defaultValue={src.match.join(", ")} />
+                </label>
+              </div>
+            ))}
+            <div className="form-actions"><button className="btn primary" type="submit">Save sources</button></div>
+          </form>
+        </section>
+
         {/* Marketing spend */}
         <section className="card">
           <div className="card-head">
@@ -161,17 +192,27 @@ export default async function ClientSettings({
             <input type="hidden" name="clientId" value={id} />
             <label className="field">Month<input name="month" type="month" defaultValue={thisMonth} required /></label>
             <label className="field">Amount ($)<input name="amount" type="number" min="0" step="0.01" required /></label>
-            <label className="field">Note<input name="note" placeholder="Facebook + Google" /></label>
+            <label className="field">
+              Source
+              <select name="source" defaultValue="">
+                <option value="">Unassigned</option>
+                {client.sources.map((src) => (
+                  <option key={src.name} value={src.name}>{src.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">Note<input name="note" placeholder="September TV buy" /></label>
             <div><button className="btn primary" type="submit">Add marketing spend</button></div>
           </form>
           {client.spend.length > 0 ? (
             <div className="table-wrap" style={{ marginTop: 16 }}>
               <table>
-                <thead><tr><th>Month</th><th className="num">Amount</th><th>Note</th><th /></tr></thead>
+                <thead><tr><th>Month</th><th>Source</th><th className="num">Amount</th><th>Note</th><th /></tr></thead>
                 <tbody>
                   {client.spend.map((s) => (
                     <tr key={s.id}>
                       <td>{new Date(`${s.month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</td>
+                      <td>{s.source ?? <span className="muted">Unassigned</span>}</td>
                       <td className="num">{money(s.amount, true)}</td>
                       <td className="muted">{s.note}</td>
                       <td style={{ textAlign: "right" }}>

@@ -17,6 +17,27 @@ export interface SpendEntry {
   month: string;
   amount: number;
   note?: string;
+  /** Marketing source this spend belongs to (one of the client's sources). Blank = unassigned. */
+  source?: string;
+}
+
+export interface MarketingSource {
+  name: string;
+  /** Lower-case keywords matched against the CRM's lead source, e.g. ["facebook", "fb", "instagram"]. */
+  match: string[];
+}
+
+/** One marketing source's results for a date range. */
+export interface SourceRow {
+  source: string;
+  spend: number;
+  leads: number;
+  conversations: number;
+  apptsSet: number;
+  connected: number;
+  applicants: number;
+  sales: number;
+  premium: number;
 }
 
 export interface MonthlyFigures {
@@ -75,6 +96,8 @@ export interface Client {
   primaryAgent?: string;
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
+  /** Marketing sources shown on the Marketing tab, in display order. */
+  sources: MarketingSource[];
   /** Yearly production, appointment totals and targets shown on the Trends tab. */
   yearly: YearRecord[];
   /** Figures entered by hand for a month. They replace sample data for that month. */
@@ -118,6 +141,8 @@ export interface DashboardData {
   metrics: Metrics;
   previous: Metrics;
   daily: DailyPoint[];
+  /** Current-range results split by marketing source (rows add up to `metrics`). */
+  bySource: SourceRow[];
   source: "ghl" | "demo";
   fetchedAt: string;
   warnings: string[];
