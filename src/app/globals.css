@@ -319,3 +319,29 @@ table.compact tr.geo-sub td:first-child { background: var(--surface-2); }
 .engine-live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .engine-num { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 @media (max-width: 760px) { .engine-live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .engine-num { font-size: 26px; } }
+
+/* ---------- Calendar ---------- */
+.today-agents { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); font-size: 13px; opacity: .9; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 960px) { .week-grid { grid-template-columns: repeat(7, minmax(150px, 1fr)); overflow-x: auto; padding-bottom: 6px; } }
+.week-day {
+  display: flex; flex-direction: column; gap: 6px; min-height: 170px; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow);
+}
+.week-day:hover { border-color: var(--axis); }
+.week-day.selected { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.week-day.today .week-day-head b { color: var(--accent); }
+.week-day-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+.week-day-sum { font-size: 12px; color: var(--ink-2); }
+.week-day-sum b { font-size: 18px; color: var(--ink); }
+.week-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12px; }
+.week-day li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media print {
+  .topbar, .tabs, .no-print { display: none !important; }
+  body { background: #fff; }
+  .card { box-shadow: none; border: 1px solid #ccc; }
+}
+.bio-facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; padding: 14px 0; border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+.bio-facts dt { font-size: 12px; color: var(--ink-muted); }
+.bio-facts dd { margin: 2px 0 0; font-weight: 600; }
+a.chip { text-decoration: none; }

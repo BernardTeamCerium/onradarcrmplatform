@@ -56,6 +56,8 @@ export async function createClient(form: FormData) {
       figures: [],
       yearly: [],
       sources: DEFAULT_SOURCES,
+      agents: [],
+      timeZone: "America/Chicago",
       typeformSecret: randomSecret(),
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
@@ -260,6 +262,27 @@ export async function saveSources(form: FormData) {
     c.sources = sources.map((src) => ({ name: src.name, match: src.match.length ? src.match : [src.name.toLowerCase()] }));
   });
   redirect(settingsPath(id, "Marketing sources saved.") + "#sources");
+}
+
+export async function saveAgents(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const ids = form.getAll("agentId").map(String);
+  const names = form.getAll("agentName").map((v) => String(v).trim());
+  const crm = form.getAll("crmUserId").map((v) => String(v).trim());
+  const tz = str(form, "timeZone");
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+  } catch {
+    redirect(settingsPath(id, "That time zone isn't recognised. Use a name like America/Chicago.") + "#agents");
+  }
+  await mutateClient(id, (c) => {
+    c.agents = names
+      .map((name, i) => ({ id: ids[i] || newId("ag"), name, crmUserId: crm[i] || undefined }))
+      .filter((a) => a.name);
+    c.timeZone = tz || c.timeZone;
+  });
+  redirect(settingsPath(id, "Agents saved.") + "#agents");
 }
 
 export async function deleteClient(form: FormData) {

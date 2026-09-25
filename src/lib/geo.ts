@@ -37,6 +37,17 @@ const PLACES: Place[] = [
   { city: "Picayune", state: "MS", share: 0.03, perf: 0.92, cycle: 1.05, market: "northshore" },
 ];
 
+/** Picks a sample place, weighted by lead share and the source's reach. */
+export function samplePlace(source: string, rand: () => number) {
+  const w = PLACES.map((p) => p.share * reach(source, p));
+  let x = rand() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < PLACES.length; i++) {
+    x -= w[i];
+    if (x <= 0) return { city: PLACES[i].city, state: PLACES[i].state };
+  }
+  return { city: PLACES[0].city, state: PLACES[0].state };
+}
+
 /** Where each source reaches: broadcast is tied to media markets, digital and bought leads are broad. */
 function reach(source: string, p: Place) {
   const s = source.toLowerCase();

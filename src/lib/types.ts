@@ -109,6 +109,10 @@ export interface Client {
   primaryAgent?: string;
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
+  /** Agents whose calendars show on the Calendar tab. */
+  agents: Agent[];
+  /** IANA time zone for the client's calendar, e.g. America/Chicago. */
+  timeZone: string;
   /** Marketing sources shown on the Marketing tab, in display order. */
   sources: MarketingSource[];
   /** Yearly production, appointment totals and targets shown on the Trends tab. */
@@ -245,4 +249,36 @@ export interface EngineData {
   source: "ghl" | "demo";
   fetchedAt: string;
   warnings: string[];
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  /** The agent's user ID in the CRM, used to match live calendar appointments. */
+  crmUserId?: string;
+}
+
+export type ApptStatus = "Scheduled" | "Confirmed" | "Showed" | "No-show" | "Cancelled";
+
+export interface CalendarAppt {
+  id: string;
+  agentId: string;
+  /** YYYY-MM-DD in the client's time zone. */
+  date: string;
+  /** HH:MM (24h) in the client's time zone. */
+  time: string;
+  minutes: number;
+  status: ApptStatus;
+  name: string;
+  age?: string;
+  /** Investable assets in dollars (estimate from the quiz). */
+  assets: number | null;
+  assetsLabel?: string;
+  city: string;
+  state: string;
+  source: string;
+  phone?: string;
+  email?: string;
+  /** Quiz title and answers, for the prospect bio. */
+  quiz?: { title: string; answers: QuizAnswer[] };
 }

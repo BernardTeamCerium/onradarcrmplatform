@@ -6,7 +6,7 @@ import "server-only";
  * Settings → Private Integrations with these read scopes:
  *   contacts.readonly, conversations.readonly, opportunities.readonly,
  *   calendars.readonly, calendars/events.readonly, locations.readonly,
- *   conversations/message.readonly (for the Engine tab's texts, emails and calls)
+ *   conversations/message.readonly (Engine tab), users.readonly (Calendar tab agents)
  */
 const BASE_URL = "https://services.leadconnectorhq.com";
 
@@ -308,4 +308,69 @@ export async function activeConversations(creds: GhlCredentials, now = Date.now(
     query: { locationId: creds.locationId, limit: 100, sort: "desc", sortBy: "last_message_date" },
   });
   return (data.conversations ?? []).filter((c) => c.lastMessageDate && now - new Date(c.lastMessageDate).getTime() < 86_400_000).length;
+}
+
+export interface CrmEvent {
+  id: string;
+  startTime: string;
+  endTime?: string;
+  contactId?: string;
+  assignedUserId?: string;
+  appointmentStatus?: string;
+  title?: string;
+}
+
+/** Every calendar event in [start, end) with who it's assigned to (for the Calendar tab). */
+export async function calendarEvents(creds: GhlCredentials, start: Date, end: Date) {
+  const { calendars } = await request<{ calendars: { id: string }[] }>(creds, "/calendars/", {
+    version: "2021-04-15",
+    query: { locationId: creds.locationId },
+  });
+  const seen = new Set<string>();
+  const out: CrmEvent[] = [];
+  for (const cal of calendars ?? []) {
+    const { events } = await request<{ events: CrmEvent[] }>(creds, "/calendars/events", {
+      version: "2021-04-15",
+      query: { locationId: creds.locationId, calendarId: cal.id, startTime: start.getTime(), endTime: end.getTime() - 1 },
+    });
+    for (const ev of events ?? []) {
+      if (seen.has(ev.id) || (ev.appointmentStatus ?? "").toLowerCase() === "invalid") continue;
+      seen.add(ev.id);
+      out.push(ev);
+    }
+  }
+  return out;
+}
+
+export async function users(creds: GhlCredentials) {
+  const data = await request<{ users: { id: string; name?: string; firstName?: string; lastName?: string }[] }>(creds, "/users/", {
+    version: "2021-07-28",
+    query: { locationId: creds.locationId },
+  });
+  return (data.users ?? []).map((u) => ({ id: u.id, name: u.name || [u.firstName, u.lastName].filter(Boolean).join(" ") || "Agent" }));
+}
+
+export interface CrmContactDetail {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  state?: string;
+  source?: string;
+}
+
+export async function contact(creds: GhlCredentials, id: string): Promise<CrmContactDetail> {
+  const { contact: c } = await request<{
+    contact: { id: string; firstName?: string; lastName?: string; contactName?: string; email?: string; phone?: string; city?: string; state?: string; source?: string };
+  }>(creds, `/contacts/${id}`, { version: "2021-07-28" });
+  return {
+    id: c.id,
+    name: c.contactName || [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Unknown",
+    email: c.email,
+    phone: c.phone,
+    city: c.city,
+    state: c.state,
+    source: c.source,
+  };
 }

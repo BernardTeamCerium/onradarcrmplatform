@@ -62,7 +62,7 @@ const PROFILES: Record<string, { leads: number; spend: number; contact: number; 
   "lead seller #1": { leads: 0.19, spend: 0.17, contact: 0.72, set: 0.8, connect: 0.9, app: 0.8, sale: 0.85, premium: 0.85, cycle: 1.35 },
 };
 const DEFAULT_PROFILE = { leads: 0.1, spend: 0.1, contact: 1, set: 1, connect: 1, app: 1, sale: 1, premium: 1, cycle: 1 };
-const profile = (name: string) => PROFILES[name.toLowerCase()] ?? DEFAULT_PROFILE;
+export const profile = (name: string) => PROFILES[name.toLowerCase()] ?? DEFAULT_PROFILE;
 
 /** Integer split of `total` in proportion to `weights` (largest remainder). */
 export function split(total: number, weights: number[]) {

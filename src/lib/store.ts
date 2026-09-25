@@ -2,7 +2,7 @@ import "server-only";
 import { promises as fs } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
-import type { Client, Database, MarketingSource, User, YearRecord } from "./types";
+import type { Agent, Client, Database, MarketingSource, User, YearRecord } from "./types";
 
 /**
  * Storage backend. On Netlify (detected at build time, see next.config.ts) everything lives in
@@ -105,6 +105,13 @@ const SIBLEY_YEARLY: YearRecord[] = [
     targetSubmitted: 55_000_000, targetPaid: 40_000_000, targetChargebacks: 4_000_000, targetApptsSet: 800, targetConnectedAppts: 520 },
 ];
 
+/** Troy plus two fictional sample agents; rename or replace them in client settings. */
+const SIBLEY_AGENTS: Agent[] = [
+  { id: "ag_troy", name: "Troy Sibley" },
+  { id: "ag_sample_1", name: "Dana Reed (sample)" },
+  { id: "ag_sample_2", name: "Marcus Hale (sample)" },
+];
+
 export const DEFAULT_SOURCES: MarketingSource[] = [
   { name: "TV", match: ["tv", "television"] },
   { name: "Radio", match: ["radio"] },
@@ -120,6 +127,14 @@ const SIBLEY_SEPTEMBER = { id: "fig_sibley_2026_09", month: "2026-09", appointme
 function migrate(db: Database): { db: Database; changed: boolean } {
   let changed = false;
   for (const c of db.clients as (Client & { averageDealValue?: number })[]) {
+    if (c.agents === undefined) {
+      c.agents = c.id === "cl_sibley" ? SIBLEY_AGENTS : [];
+      changed = true;
+    }
+    if (!c.timeZone) {
+      c.timeZone = "America/Chicago";
+      changed = true;
+    }
     if (c.sources === undefined) {
       c.sources = DEFAULT_SOURCES;
       changed = true;
@@ -166,6 +181,8 @@ async function seed(): Promise<Database> {
     figures: [SIBLEY_SEPTEMBER],
     yearly: SIBLEY_YEARLY,
     sources: DEFAULT_SOURCES,
+    agents: SIBLEY_AGENTS,
+    timeZone: "America/Chicago",
     demoMode: true,
     createdAt: now,
   };

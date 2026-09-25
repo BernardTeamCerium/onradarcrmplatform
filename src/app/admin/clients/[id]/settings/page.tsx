@@ -16,6 +16,7 @@ import {
   removeLogo,
   resetPassword,
   saveFigures,
+  saveAgents,
   saveSources,
   saveYear,
   testConnection,
@@ -147,6 +148,42 @@ export default async function ClientSettings({
           <form action={testConnection} style={{ marginTop: 8 }}>
             <input type="hidden" name="clientId" value={id} />
             <button className="btn sm" type="submit">Test connection</button>
+          </form>
+        </section>
+
+        {/* Agents */}
+        <section className="card" id="agents">
+          <div className="card-head">
+            <div>
+              <h2>Agents &amp; calendar</h2>
+              <p className="muted small">
+                Each agent gets their own view on the Calendar tab. With the CRM connected, add the agent&apos;s CRM user ID so their
+                appointments are matched (otherwise agents are matched by name). Clear a name to remove an agent.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/calendar`}>Open calendar</Link>
+          </div>
+          <form action={saveAgents} className="stack" style={{ gap: 8 }}>
+            <input type="hidden" name="clientId" value={id} />
+            {[...client.agents, { id: "", name: "", crmUserId: "" }, { id: "", name: "", crmUserId: "" }].map((ag, i) => (
+              <div className="form-grid" key={ag.id || `new${i}`} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
+                <input type="hidden" name="agentId" value={ag.id} />
+                <label className="field">
+                  {i === 0 ? "Agent name" : <span className="sr-only">Agent name</span>}
+                  <input name="agentName" defaultValue={ag.name} placeholder={ag.id ? undefined : "Add an agent"} />
+                </label>
+                <label className="field">
+                  {i === 0 ? "CRM user ID (optional)" : <span className="sr-only">CRM user ID</span>}
+                  <input name="crmUserId" defaultValue={ag.crmUserId ?? ""} />
+                </label>
+              </div>
+            ))}
+            <label className="field" style={{ maxWidth: 320 }}>
+              Calendar time zone
+              <input name="timeZone" defaultValue={client.timeZone} />
+              <span className="hint">For example America/Chicago (Central) or America/New_York (Eastern)</span>
+            </label>
+            <div className="form-actions"><button className="btn primary" type="submit">Save agents</button></div>
           </form>
         </section>
 

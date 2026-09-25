@@ -26,6 +26,18 @@ Every metric is compared with the previous period of the same length. Date range
 
 **Sibley Financial Group** is already set up with its crest logo (from sfg.onradarcrm.com) and a client login.
 
+## Engine
+
+The **Engine** tab shows outreach running: a live "today so far" strip (texts, emails and calls sent today, and conversations active in the last 24 hours) that refreshes every 30 seconds. It also has totals for the chosen dates (texts, emails and calls sent, replies, call answer rate, total conversations, appointments set from conversations), a daily outreach chart, and a per-source table of outreach, conversations, appointments set and booked rate (appointments ÷ conversations). With the CRM connected it reads the CRM message log, which needs the `conversations/message.readonly` scope.
+
+## Calendar
+
+The **Calendar** tab shows appointments by agent. At the top is today's preview: appointments today, projected assets today, what's still to come and who's next, split by agent. Below it is a week view with each day's count and projected assets, and an agent filter. Clicking a day lists each appointment's time, prospect, age, assets, city and state, source and status, with a **View bio** link. The bio is a printable prospect brief (print or save as PDF) with every quiz answer.
+
+- **Assets** are estimated from the quiz's savings answer.
+- **Agents and the calendar time zone** are set in Admin → client → **Settings → Agents & calendar**. Sibley's two extra agents are fictional placeholders.
+- **With the CRM connected**, appointments come from the CRM calendars grouped by assigned user (needs `users.readonly`). Quiz details are linked when the prospect's email or phone matches a Typeform lead.
+
 ## Marketing
 
 The **Marketing** tab breaks each date range down by source (TV, Radio, Facebook, TikTok, YouTube and Lead Seller #1 by default). For each source it shows marketing spend, leads, cost per lead, conversations, contact rate (conversations ÷ leads), appointments set, connected appointments, connected rate, cost per connected appointment, applications and sales conversion. It also highlights the best source on each measure and has a chart that ranks the sources by whichever measure you pick. The rows add up to the Dashboard totals.

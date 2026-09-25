@@ -287,7 +287,7 @@ export interface DemoDay extends DailyPoint {
   premium: number;
 }
 
-function demoDay(client: Client, date: string): DemoDay {
+export function demoDay(client: Client, date: string): DemoDay {
   const rand = rng(hash(`${client.id}:${date}`));
   const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
   const weekday = dow === 0 || dow === 6 ? 0.55 : 1;
