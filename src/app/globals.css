@@ -308,3 +308,14 @@ table.compact th, table.compact td { padding-left: 8px; padding-right: 8px; }
 table.compact tr.geo-sub td:first-child { background: var(--surface-2); }
 .linkish { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; font-weight: 600; text-align: left; }
 .caret { display: inline-block; width: 12px; color: var(--ink-muted); }
+
+/* ---------- Engine ---------- */
+.engine-live {
+  background: radial-gradient(700px 240px at 90% 0%, rgba(53, 230, 165, 0.18), transparent 60%), var(--navy);
+  color: #e8eef7; border-radius: var(--radius); padding: 18px 20px;
+}
+.engine-live-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.engine-badge { background: rgba(53, 230, 165, 0.14); color: var(--green); }
+.engine-live-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.engine-num { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+@media (max-width: 760px) { .engine-live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .engine-num { font-size: 26px; } }

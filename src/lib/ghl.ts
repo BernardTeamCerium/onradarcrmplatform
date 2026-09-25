@@ -5,7 +5,8 @@ import "server-only";
  * Auth uses a sub-account Private Integration token, created in GoHighLevel under
  * Settings → Private Integrations with these read scopes:
  *   contacts.readonly, conversations.readonly, opportunities.readonly,
- *   calendars.readonly, calendars/events.readonly, locations.readonly
+ *   calendars.readonly, calendars/events.readonly, locations.readonly,
+ *   conversations/message.readonly (for the Engine tab's texts, emails and calls)
  */
 const BASE_URL = "https://services.leadconnectorhq.com";
 
@@ -257,4 +258,54 @@ export async function opportunitiesSince(creds: GhlCredentials, since: Date, max
     if (oldest && new Date(oldest.createdAt).getTime() < since.getTime() - 365 * 86_400_000) break;
   }
   return out;
+}
+
+export interface CrmMessage {
+  dateAdded: string;
+  direction: "inbound" | "outbound";
+  contactId?: string;
+  callStatus?: string;
+}
+
+/**
+ * Messages on one channel in [start, end). Reads up to `maxPages` × 500 messages; `total` is the full count,
+ * so callers can scale the sample when a busy account has more.
+ */
+export async function messages(creds: GhlCredentials, channel: "SMS" | "Email" | "Call", start: Date, end: Date, maxPages = 10) {
+  const items: CrmMessage[] = [];
+  let cursor: string | undefined;
+  let total = 0;
+  for (let page = 0; page < maxPages; page++) {
+    const data = await request<{
+      messages: { dateAdded: string; direction: "inbound" | "outbound"; contactId?: string; meta?: { callStatus?: string } }[];
+      nextCursor?: string | null;
+      total?: number;
+    }>(creds, "/conversations/messages/export", {
+      version: "2021-04-15",
+      query: {
+        locationId: creds.locationId,
+        channel,
+        startDate: start.toISOString(),
+        endDate: new Date(end.getTime() - 1).toISOString(),
+        limit: 500,
+        cursor,
+      },
+    });
+    total = data.total ?? total;
+    for (const m of data.messages ?? []) {
+      items.push({ dateAdded: m.dateAdded, direction: m.direction, contactId: m.contactId, callStatus: m.meta?.callStatus });
+    }
+    if (!data.nextCursor) break;
+    cursor = data.nextCursor;
+  }
+  return { total: Math.max(total, items.length), items };
+}
+
+/** Conversations with a message in the last 24 hours (checks the 100 most recently active). */
+export async function activeConversations(creds: GhlCredentials, now = Date.now()) {
+  const data = await request<{ conversations: { lastMessageDate?: number | string }[] }>(creds, "/conversations/search", {
+    version: "2021-04-15",
+    query: { locationId: creds.locationId, limit: 100, sort: "desc", sortBy: "last_message_date" },
+  });
+  return (data.conversations ?? []).filter((c) => c.lastMessageDate && now - new Date(c.lastMessageDate).getTime() < 86_400_000).length;
 }

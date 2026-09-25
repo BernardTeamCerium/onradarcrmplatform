@@ -4,16 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface TrendPoint {
   label: string;
-  leads: number;
-  appointments: number;
+  [series: string]: number | string;
+}
+
+export interface TrendSeries {
+  key: string;
+  name: string;
+  color: string;
 }
 
 const M = { top: 16, right: 16, bottom: 28, left: 40 };
 
-const SERIES = [
+const DEFAULT_SERIES: TrendSeries[] = [
   { key: "leads", name: "Leads", color: "var(--series-1)" },
   { key: "appointments", name: "Appointments", color: "var(--series-2)" },
-] as const;
+];
 
 function niceMax(v: number) {
   if (v <= 4) return 4;
@@ -25,7 +30,18 @@ function niceMax(v: number) {
   return Math.ceil(v / pow) * pow;
 }
 
-export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "day" | "week" }) {
+export function TrendChart({
+  points,
+  bucket,
+  series: SERIES = DEFAULT_SERIES,
+  label = "Leads and appointments",
+}: {
+  points: TrendPoint[];
+  bucket: "day" | "week";
+  series?: TrendSeries[];
+  label?: string;
+}) {
+  const val = (p: TrendPoint, k: string) => Number(p[k] ?? 0);
   const [hover, setHover] = useState<number | null>(null);
   const [W, setW] = useState(760);
   const ref = useRef<SVGSVGElement>(null);
@@ -42,7 +58,7 @@ export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "
   }, []);
 
   const { max, x, y } = useMemo(() => {
-    const max = niceMax(Math.max(1, ...points.map((p) => Math.max(p.leads, p.appointments))));
+    const max = niceMax(Math.max(1, ...points.flatMap((p) => SERIES.map((s) => val(p, s.key)))));
     const iw = W - M.left - M.right;
     const ih = H - M.top - M.bottom;
     const x = (i: number) => M.left + (points.length <= 1 ? iw / 2 : (i / (points.length - 1)) * iw);
@@ -80,7 +96,7 @@ export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "
         ref={ref}
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Leads and appointments per ${bucket}`}
+        aria-label={`${label} per ${bucket}`}
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
         style={{ touchAction: "pan-y" }}
@@ -101,12 +117,12 @@ export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "
         {SERIES.map((s) => (
           <g key={s.key}>
             <path
-              d={`M${points.map((p, i) => `${x(i)},${y(p[s.key])}`).join("L")}L${x(points.length - 1)},${y(0)}L${x(0)},${y(0)}Z`}
+              d={`M${points.map((p, i) => `${x(i)},${y(val(p, s.key))}`).join("L")}L${x(points.length - 1)},${y(0)}L${x(0)},${y(0)}Z`}
               fill={s.color}
               opacity={0.08}
             />
             <polyline
-              points={points.map((p, i) => `${x(i)},${y(p[s.key])}`).join(" ")}
+              points={points.map((p, i) => `${x(i)},${y(val(p, s.key))}`).join(" ")}
               fill="none"
               stroke={s.color}
               strokeWidth={2}
@@ -119,7 +135,7 @@ export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={M.top} y2={H - M.bottom} stroke="var(--axis)" strokeWidth={1} />
             {SERIES.map((s) => (
-              <circle key={s.key} cx={x(hover)} cy={y(hp[s.key])} r={4.5} fill={s.color} stroke="var(--surface)" strokeWidth={2} />
+              <circle key={s.key} cx={x(hover)} cy={y(val(hp, s.key))} r={4.5} fill={s.color} stroke="var(--surface)" strokeWidth={2} />
             ))}
           </g>
         )}
@@ -137,7 +153,7 @@ export function TrendChart({ points, bucket }: { points: TrendPoint[]; bucket: "
           {SERIES.map((s) => (
             <div className="t-row" key={s.key}>
               <span><span className="sw" style={{ background: s.color, display: "inline-block", width: 10, height: 3, marginRight: 6, verticalAlign: "middle", borderRadius: 2 }} />{s.name}</span>
-              <b>{hp[s.key].toLocaleString()}</b>
+              <b>{val(hp, s.key).toLocaleString()}</b>
             </div>
           ))}
         </div>

@@ -203,3 +203,46 @@ export interface Lead {
   externalId?: string;
   test?: boolean;
 }
+
+/** Outreach activity ("the engine"): texts, emails and calls. */
+export interface EngineTotals {
+  smsOut: number;
+  smsIn: number;
+  emailOut: number;
+  emailIn: number;
+  callsOut: number;
+  callsAnswered: number;
+  callsIn: number;
+}
+
+export interface EngineDay {
+  date: string;
+  sms: number;
+  email: number;
+  calls: number;
+}
+
+export interface EngineSource {
+  source: string;
+  conversations: number;
+  apptsSet: number;
+  smsOut: number;
+  emailOut: number;
+  callsOut: number;
+  replies: number;
+}
+
+export interface EngineData {
+  totals: EngineTotals;
+  daily: EngineDay[];
+  bySource: EngineSource[];
+  conversations: number;
+  apptsSet: number;
+  /** Conversations with a message in the last 24 hours. */
+  activeNow: number;
+  /** Today's outbound activity. `fullDay` (sample data) is spread across the day as it runs. */
+  today: { sms: number; email: number; calls: number; fullDay: boolean };
+  source: "ghl" | "demo";
+  fetchedAt: string;
+  warnings: string[];
+}

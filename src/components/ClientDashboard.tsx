@@ -81,7 +81,7 @@ export async function ClientDashboard({
                 </thead>
                 <tbody>
                   {trend.points.map((p) => (
-                    <tr key={p.label}><td>{p.label}</td><td className="num">{count(p.leads)}</td><td className="num">{count(p.appointments)}</td></tr>
+                    <tr key={p.label}><td>{p.label}</td><td className="num">{count(Number(p.leads))}</td><td className="num">{count(Number(p.appointments))}</td></tr>
                   ))}
                 </tbody>
               </table>

@@ -253,7 +253,7 @@ function countBy(isoDates: string[]) {
 // ---------------------------------------------------------------------------
 // Sample data (deterministic per client + day, so reloads and period comparisons stay stable)
 
-function hash(str: string) {
+export function hash(str: string) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
@@ -262,7 +262,7 @@ function hash(str: string) {
   return h >>> 0;
 }
 
-function rng(seed: number) {
+export function rng(seed: number) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -271,13 +271,13 @@ function rng(seed: number) {
   };
 }
 
-function binomial(n: number, p: number, rand: () => number) {
+export function binomial(n: number, p: number, rand: () => number) {
   let k = 0;
   for (let i = 0; i < n; i++) if (rand() < p) k++;
   return k;
 }
 
-interface DemoDay extends DailyPoint {
+export interface DemoDay extends DailyPoint {
   /** Average lead-to-application days for applications submitted this day. */
   cycle: number;
   apptsSet: number;
@@ -371,7 +371,7 @@ function demoMonth(client: Client, month: string, today: string): DemoDay[] {
   return rows;
 }
 
-function demoRows(client: Client, r: { start: Date; end: Date }) {
+export function demoRows(client: Client, r: { start: Date; end: Date }) {
   const today = dayKey(Date.now());
   const months = new Map<string, Map<string, DemoDay>>();
   return eachDay(r).map((d) => {
