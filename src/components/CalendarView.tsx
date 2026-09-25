@@ -177,17 +177,18 @@ export async function CalendarView({
                 <tr>
                   <th>Time</th>
                   <th>Prospect</th>
+                  <th>Type</th>
                   <th>Age</th>
                   <th className="num">Assets</th>
                   <th>Location</th>
                   <th>Source</th>
                   <th>Status</th>
-                  <th>Quiz bio</th>
+                  <th>Bio</th>
                 </tr>
               </thead>
               <tbody>
                 {byAgent.map((g) => (
-                  <AgentRows key={g.agent.id} name={g.agent.name} appts={g.appts} bioBase={basePath} />
+                  <AgentRows key={g.agent.id} name={g.agent.name} appts={g.appts} bioBase={basePath} clientId={client.id} />
                 ))}
               </tbody>
             </table>
@@ -204,18 +205,18 @@ export async function CalendarView({
   );
 }
 
-function AgentRows({ name, appts, bioBase }: { name: string; appts: CalendarAppt[]; bioBase: string }) {
+function AgentRows({ name, appts, bioBase, clientId }: { name: string; appts: CalendarAppt[]; bioBase: string; clientId: string }) {
   const assets = appts.filter(active).reduce((s, a) => s + (a.assets ?? 0), 0);
   return (
     <>
       <tr className="group-row">
-        <td colSpan={8}>
+        <td colSpan={9}>
           {name} <span className="muted" style={{ fontWeight: 400 }}>· {appts.filter(active).length} appts · {moneyShort(assets)} projected assets</span>
         </td>
       </tr>
       {appts.length === 0 && (
         <tr>
-          <td colSpan={8} className="muted">No appointments</td>
+          <td colSpan={9} className="muted">No appointments</td>
         </tr>
       )}
       {appts.map((a) => (
@@ -224,6 +225,7 @@ function AgentRows({ name, appts, bioBase }: { name: string; appts: CalendarAppt
           <td>
             <b>{a.name}</b>
           </td>
+          <td>{a.apptType ?? <span className="muted">—</span>}</td>
           <td>{a.age ?? "—"}</td>
           <td className="num">{a.assets ? moneyShort(a.assets) : "—"}</td>
           <td>{a.city === "Unknown" ? "—" : `${a.city}, ${a.state}`}</td>
@@ -235,13 +237,14 @@ function AgentRows({ name, appts, bioBase }: { name: string; appts: CalendarAppt
             </span>
           </td>
           <td>
-            {a.quiz ? (
+            <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
               <Link href={`${bioBase}/${encodeURIComponent(a.id)}`} className="btn sm">
-                View bio
+                View
               </Link>
-            ) : (
-              <span className="muted small">No quiz</span>
-            )}
+              <a href={`/api/clients/${clientId}/appointments/${encodeURIComponent(a.id)}/docx`} className="btn sm" download>
+                Word
+              </a>
+            </div>
           </td>
         </tr>
       ))}

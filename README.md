@@ -32,9 +32,9 @@ The **Engine** tab shows outreach running: a live "today so far" strip (texts, e
 
 ## Calendar
 
-The **Calendar** tab shows appointments by agent. At the top is today's preview: appointments today, projected assets today, what's still to come and who's next, split by agent. Below it is a week view with each day's count and projected assets, and an agent filter. Clicking a day lists each appointment's time, prospect, age, assets, city and state, source and status, with a **View bio** link. The bio is a printable prospect brief (print or save as PDF) with every quiz answer.
+The **Calendar** tab shows appointments by agent. At the top is today's preview: appointments today, projected assets today, what's still to come and who's next, split by agent. Below it is a week view with each day's count and projected assets, and an agent filter. Clicking a day lists each appointment's time, prospect, age, assets, city and state, source and status, with a **View bio** link. The bio is a printable prospect brief (print or save as PDF) with every quiz answer, and each appointment also has a **Word** download: a full prospect brief (.docx) covering the meeting type (new money, policy review, annuity review, 401(k) rollover, retirement income plan, or beneficiary and estate review), household and finances, new money in motion, existing policies to review, goals, notes for the agent, quiz responses and a prep checklist.
 
-- **Assets** are estimated from the quiz's savings answer.
+- **Assets** are estimated from the quiz's savings answer. In sample mode the household, policy and new-money details are fictional. With the CRM connected, the meeting type is read from the appointment title (e.g. "Policy review - Jane Doe").
 - **Agents and the calendar time zone** are set in Admin → client → **Settings → Agents & calendar**. Sibley's two extra agents are fictional placeholders.
 - **With the CRM connected**, appointments come from the CRM calendars grouped by assigned user (needs `users.readonly`). Quiz details are linked when the prospect's email or phone matches a Typeform lead.
 

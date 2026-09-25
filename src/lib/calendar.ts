@@ -3,8 +3,9 @@ import * as ghl from "./ghl";
 import { cleanPlace, samplePlace } from "./geo";
 import { leadFromTypeform, listLeads, sampleTypeformPayload } from "./leads";
 import { demoRows, hash, rng, usesLiveData } from "./metrics";
+import { sampleProfile } from "./profiles";
 import { matchSource, OTHER, profile } from "./sources";
-import type { Agent, ApptStatus, CalendarAppt, Client, Lead } from "./types";
+import type { Agent, ApptStatus, ApptType, CalendarAppt, Client, Lead } from "./types";
 
 const DAY = 86_400_000;
 
@@ -100,6 +101,7 @@ function sampleDay(client: Client, date: string, today: { date: string; minutes:
     const source = sourceNames.length ? pickWeighted(sourceNames, sourceW, rand) : OTHER;
     const place = samplePlace(source, rand);
     const saved = answerTo(lead.answers, /saved/);
+    const assets = assetsFrom(saved, rand);
     appts.push({
       id: `${date}~${i}`,
       agentId: agent.id,
@@ -109,7 +111,7 @@ function sampleDay(client: Client, date: string, today: { date: string; minutes:
       status: "Scheduled",
       name: lead.name,
       age: answerTo(lead.answers, /old|age/),
-      assets: assetsFrom(saved, rand),
+      assets,
       assetsLabel: saved,
       city: place.city,
       state: place.state,
@@ -117,7 +119,9 @@ function sampleDay(client: Client, date: string, today: { date: string; minutes:
       phone: lead.phone,
       email: lead.email,
       quiz: { title: lead.source, answers: lead.answers },
+      profile: sampleProfile(rng(hash(`${client.id}:${date}:profile:${i}`)), lead.answers, assets),
     });
+    appts[appts.length - 1].apptType = appts[appts.length - 1].profile!.apptType;
   }
   appts.sort((a, b) => a.time.localeCompare(b.time) || a.agentId.localeCompare(b.agentId));
 
@@ -146,6 +150,18 @@ function matchLead(leads: Lead[], c: ghl.CrmContactDetail) {
   const email = c.email?.toLowerCase();
   const phone = c.phone?.replace(/\D/g, "").slice(-10);
   return leads.find((l) => (email && l.email?.toLowerCase() === email) || (phone && l.phone?.replace(/\D/g, "").slice(-10) === phone));
+}
+
+/** Reads the meeting type from the CRM appointment title, e.g. "Policy review - Jane Doe". */
+function typeFromTitle(title?: string): ApptType | undefined {
+  const t = (title ?? "").toLowerCase();
+  if (/rollover|401/.test(t)) return "401(k) rollover";
+  if (/annuity/.test(t)) return "Annuity review";
+  if (/policy|review/.test(t)) return "Policy review";
+  if (/income/.test(t)) return "Retirement income plan";
+  if (/estate|beneficiar/.test(t)) return "Beneficiary & estate review";
+  if (/new money|new client|consult|strategy/.test(t)) return "New money";
+  return undefined;
 }
 
 function mapStatus(s: string | undefined, past: boolean): ApptStatus {
@@ -211,6 +227,7 @@ async function liveDays(client: Client, dates: string[], today: { date: string; 
       phone: c.phone,
       email: c.email,
       quiz: lead ? { title: lead.source, answers: lead.answers } : undefined,
+      apptType: typeFromTitle(e.title),
     };
   });
   return { agents, appts: appts.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)) };

@@ -27,7 +27,10 @@ export async function ProspectBio({ client, apptId, backHref }: { client: Client
   const agent = agents.find((x) => x.id === a.agentId)?.name ?? "Unassigned";
   const h = Number(a.time.slice(0, 2));
   const when = `${new Date(`${a.date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })} at ${((h + 11) % 12) + 1}:${a.time.slice(3)} ${h < 12 ? "AM" : "PM"}`;
+  const p = a.profile;
+  const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
   const facts = [
+    ["Meeting type", a.apptType ?? "—"],
     ["Appointment", when],
     ["Agent", agent],
     ["Status", a.status],
@@ -37,12 +40,27 @@ export async function ProspectBio({ client, apptId, backHref }: { client: Client
     ["Age", a.age ?? "—"],
     ["Retirement savings", a.assetsLabel ? `${a.assetsLabel}${a.assets ? ` (est. ${money(a.assets)})` : ""}` : "—"],
     ["Lead source", a.source],
+    ...(p
+      ? [
+          ["Relationship", p.existingClient ? "Existing client" : "New prospect"],
+          ["Format", p.meetingFormat],
+          ["Marital status", p.spouse ? `${p.maritalStatus} · spouse ${p.spouse}` : p.maritalStatus],
+          ["Employment", p.employment],
+          ["Household income", p.householdIncome],
+          ["Risk tolerance", p.riskTolerance],
+        ]
+      : []),
   ];
   return (
     <div className="stack bio">
       <div className="row no-print" style={{ justifyContent: "space-between" }}>
         <Link className="btn sm" href={backHref}>← Back to calendar</Link>
-        <PrintButton />
+        <div className="row" style={{ gap: 8 }}>
+          <a className="btn" href={`/api/clients/${client.id}/appointments/${encodeURIComponent(a.id)}/docx`} download>
+            Download Word doc
+          </a>
+          <PrintButton />
+        </div>
       </div>
       <article className="card stack" style={{ gap: 18 }}>
         <div className="client-header">
@@ -61,6 +79,44 @@ export async function ProspectBio({ client, apptId, backHref }: { client: Client
             </div>
           ))}
         </dl>
+        {p?.newMoney && (
+          <div className="bio-callout">
+            <b>New money: {money0(p.newMoney.amount)}</b> from {p.newMoney.source.toLowerCase()} · {p.newMoney.timing.toLowerCase()}
+          </div>
+        )}
+        {p && (
+          <div>
+            <h2 style={{ marginBottom: 8 }}>{p.existingPolicies.length ? "Policies to review" : "Existing policies"}</h2>
+            {p.existingPolicies.length ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Product</th><th>Issued</th><th>Value</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {p.existingPolicies.map((x, i) => (
+                      <tr key={i}><td>{x.product}</td><td>{x.issued}</td><td>{x.value}</td><td className="muted">{x.note}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="muted">No existing policies on file.</p>
+            )}
+          </div>
+        )}
+        {p && (
+          <div className="grid-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div>
+              <h2 style={{ marginBottom: 8 }}>Goals</h2>
+              <ul className="plan">{p.goals.map((g) => <li key={g}>{g}</li>)}</ul>
+            </div>
+            <div>
+              <h2 style={{ marginBottom: 8 }}>Notes for the agent</h2>
+              <ul className="plan">{p.notes.map((g) => <li key={g}>{g}</li>)}</ul>
+            </div>
+          </div>
+        )}
         <div>
           <h2 style={{ marginBottom: 8 }}>Quiz responses</h2>
           {a.quiz ? (

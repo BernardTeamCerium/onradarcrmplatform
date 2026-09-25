@@ -281,4 +281,40 @@ export interface CalendarAppt {
   email?: string;
   /** Quiz title and answers, for the prospect bio. */
   quiz?: { title: string; answers: QuizAnswer[] };
+  /** What the meeting is for (new money, policy review, ...). */
+  apptType?: ApptType;
+  /** Fuller background for the agent's prep brief (Word download). */
+  profile?: ProspectProfile;
+}
+
+export type ApptType =
+  | "New money"
+  | "Policy review"
+  | "Annuity review"
+  | "401(k) rollover"
+  | "Retirement income plan"
+  | "Beneficiary & estate review";
+
+export interface ExistingPolicy {
+  product: string;
+  issued: string;
+  value: string;
+  note?: string;
+}
+
+export interface ProspectProfile {
+  apptType: ApptType;
+  existingClient: boolean;
+  meetingFormat: string;
+  maritalStatus: string;
+  spouse?: string;
+  employment: string;
+  householdIncome: string;
+  riskTolerance: string;
+  /** New money coming in, if any. */
+  newMoney?: { amount: number; source: string; timing: string };
+  existingPolicies: ExistingPolicy[];
+  goals: string[];
+  notes: string[];
+  prep: string[];
 }

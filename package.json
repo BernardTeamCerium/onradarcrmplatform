@@ -11,6 +11,7 @@
   "dependencies": {
     "@netlify/blobs": "^11.1.0",
     "bcryptjs": "^3.0.3",
+    "docx": "^9.7.2",
     "jose": "^6.2.12",
     "next": "^15.5.26",
     "react": "^19.3.0",
