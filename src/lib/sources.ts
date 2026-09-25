@@ -65,7 +65,7 @@ const DEFAULT_PROFILE = { leads: 0.1, spend: 0.1, contact: 1, set: 1, connect: 1
 const profile = (name: string) => PROFILES[name.toLowerCase()] ?? DEFAULT_PROFILE;
 
 /** Integer split of `total` in proportion to `weights` (largest remainder). */
-function split(total: number, weights: number[]) {
+export function split(total: number, weights: number[]) {
   const sum = weights.reduce((a, b) => a + b, 0);
   const w = sum > 0 ? weights : weights.map(() => 1);
   const ws = sum > 0 ? sum : w.length;
@@ -78,7 +78,7 @@ function split(total: number, weights: number[]) {
 }
 
 /** Like `split`, but no bucket may exceed its cap; overflow moves to buckets with room. */
-function splitCapped(total: number, weights: number[], caps: number[]) {
+export function splitCapped(total: number, weights: number[], caps: number[]) {
   const out = weights.map(() => 0);
   let remaining = Math.min(total, caps.reduce((a, b) => a + b, 0));
   for (let guard = 0; remaining > 0 && guard < 10; guard++) {

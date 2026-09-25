@@ -27,9 +27,8 @@ export interface MarketingSource {
   match: string[];
 }
 
-/** One marketing source's results for a date range. */
-export interface SourceRow {
-  source: string;
+/** Funnel counts for any slice of the data (a source, a place, or a source within a place). */
+export interface Counts {
   spend: number;
   leads: number;
   conversations: number;
@@ -38,8 +37,20 @@ export interface SourceRow {
   applicants: number;
   sales: number;
   premium: number;
-  /** Sum of days from lead to application across this source's applications (÷ applicants = average). */
+  /** Sum of days from lead to application across these applications (÷ applicants = average). */
   cycleDaysSum: number;
+}
+
+/** One marketing source's results for a date range. */
+export interface SourceRow extends Counts {
+  source: string;
+}
+
+/** One source's results within one city. */
+export interface GeoCell extends Counts {
+  state: string;
+  city: string;
+  source: string;
 }
 
 export interface MonthlyFigures {
@@ -151,6 +162,8 @@ export interface DashboardData {
   daily: DailyPoint[];
   /** Current-range results split by marketing source (rows add up to `metrics`). */
   bySource: SourceRow[];
+  /** Current-range results split by city and source (cells add up to `bySource`). */
+  byGeo: GeoCell[];
   source: "ghl" | "demo";
   fetchedAt: string;
   warnings: string[];

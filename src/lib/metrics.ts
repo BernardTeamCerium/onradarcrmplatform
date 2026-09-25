@@ -2,6 +2,7 @@ import "server-only";
 import * as ghl from "./ghl";
 import { dayKey, eachDay, previousRange, type DateRange } from "./ranges";
 import { liveBySource, matchSource, sampleBySource } from "./sources";
+import { cleanPlace, liveByGeo, sampleByGeo, type GeoFact } from "./geo";
 import type { Client, DailyPoint, DashboardData, Metrics } from "./types";
 
 const CACHE_TTL_MS = 5 * 60_000;
@@ -107,6 +108,11 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   const contactSource = new Map(leadsNow.contacts.map((c) => [c.id, matchSource(client, c.source)]));
   const sourceOf = (contactId?: string, fallback?: string) =>
     (contactId && contactSource.get(contactId)) || matchSource(client, fallback);
+  const contactPlace = new Map(leadsNow.contacts.map((c) => [c.id, cleanPlace(c.city, c.state)]));
+  const fact = (contactId?: string, fallbackSource?: string) => ({
+    source: sourceOf(contactId, fallbackSource),
+    ...((contactId && contactPlace.get(contactId)) || cleanPlace()),
+  });
 
   if (leadsNow.dates.length < leadsNow.total) {
     warnings.push("Daily lead trend is based on the most recent 5,000 contacts in this period.");
@@ -142,12 +148,12 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     let premium = 0;
     let applicants = 0;
     let cycleDaysSum = 0;
-    const appSources: { source: string; premium: number; cycleDays: number }[] = [];
-    const saleSources: string[] = [];
+    const appFacts: (GeoFact & { premium: number; cycleDays: number })[] = [];
+    const saleFacts: GeoFact[] = [];
     for (const o of opps) {
       if (o.status === "won" && inWindow(o.lastStatusChangeAt ?? o.updatedAt, r)) {
         sales++;
-        saleSources.push(sourceOf(o.contactId, o.source));
+        saleFacts.push(fact(o.contactId, o.source));
       }
       const appIdx = appStageIndex.get(o.pipelineId);
       const reachedApp =
@@ -161,10 +167,10 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
         const leadAt = new Date((o.contactId && contactAdded.get(o.contactId)) || o.createdAt).getTime();
         const days = Math.max(0, (appliedAt - leadAt) / 86_400_000);
         cycleDaysSum += days;
-        appSources.push({ source: sourceOf(o.contactId, o.source), premium: value, cycleDays: days });
+        appFacts.push({ ...fact(o.contactId, o.source), premium: value, cycleDays: days });
       }
     }
-    return { sales, premium, applicants, cycleDaysSum, appSources, saleSources };
+    return { sales, premium, applicants, cycleDaysSum, appFacts, saleFacts };
   };
 
   const days = eachDay(range);
@@ -180,14 +186,23 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
   const before = oppStats(prev);
   const current = appts.bookings.filter((b) => inWindow(b.startTime, range));
   const convWeight = convSample.contactIds.length > 0 ? convNow / convSample.contactIds.length : 0;
+  const facts = {
+    leads: leadsNow.contacts.map((c) => fact(c.id)),
+    conversations: convSample.contactIds.map((id) => ({ ...fact(id), weight: convWeight })),
+    apptsSet: current.map((b) => fact(b.contactId)),
+    connected: current.filter((b) => b.connected).map((b) => fact(b.contactId)),
+    applicants: now.appFacts,
+    sales: now.saleFacts,
+  };
   const bySource = liveBySource(client, range, {
-    leads: leadsNow.contacts.map((c) => matchSource(client, c.source)),
-    conversations: convSample.contactIds.map((id) => ({ source: sourceOf(id), weight: convWeight })),
-    apptsSet: current.map((b) => sourceOf(b.contactId)),
-    connected: current.filter((b) => b.connected).map((b) => sourceOf(b.contactId)),
-    applicants: now.appSources,
-    sales: now.saleSources,
+    leads: facts.leads.map((f) => f.source),
+    conversations: facts.conversations,
+    apptsSet: facts.apptsSet.map((f) => f.source),
+    connected: facts.connected.map((f) => f.source),
+    applicants: facts.applicants,
+    sales: facts.sales.map((f) => f.source),
   });
+  const byGeo = liveByGeo(bySource, facts);
 
   return {
     metrics: derive({
@@ -219,6 +234,7 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
       spend: dailySpend(client, d),
     })),
     bySource,
+    byGeo,
     source: "ghl",
     fetchedAt: new Date().toISOString(),
     warnings,
@@ -388,9 +404,11 @@ function demoData(client: Client, range: DateRange): DashboardData {
   const now = sum(range);
   const before = sum(previousRange(range));
   const metrics = derive(now.total);
+  const bySource = sampleBySource(client, { ...metrics, spend: now.total.spend }, range);
   return {
     metrics,
-    bySource: sampleBySource(client, { ...metrics, spend: now.total.spend }, range),
+    bySource,
+    byGeo: sampleByGeo(bySource),
     previous: derive(before.total),
     daily: now.rows.map(({ date, leads, appointments, spend }) => ({ date, leads, appointments, spend })),
     source: "demo",

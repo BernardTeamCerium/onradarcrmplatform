@@ -11,7 +11,7 @@ export interface SourceMetric {
 }
 
 /** Ranks sources on one chosen metric at a time (single series, so no legend box is needed). */
-export function SourceBars({ metrics }: { metrics: SourceMetric[] }) {
+export function SourceBars({ metrics, noun = "source" }: { metrics: SourceMetric[]; noun?: string }) {
   const [key, setKey] = useState(metrics[0]?.key);
   const [hover, setHover] = useState<string | null>(null);
   const m = metrics.find((x) => x.key === key) ?? metrics[0];
@@ -31,9 +31,9 @@ export function SourceBars({ metrics }: { metrics: SourceMetric[] }) {
         ))}
       </nav>
       <p className="muted small" style={{ margin: 0 }}>
-        {m.label} by source, {m.lowerIsBetter ? "lowest (best) first" : "highest first"}
+        {m.label} by {noun}, {m.lowerIsBetter ? "lowest (best) first" : "highest first"}
       </p>
-      <div className="funnel" role="list" aria-label={`${m.label} by source`}>
+      <div className="funnel" role="list" aria-label={`${m.label} by ${noun}`}>
         {rows.map((r, i) => {
           const w = ((r.value ?? 0) / max) * 74;
           return (

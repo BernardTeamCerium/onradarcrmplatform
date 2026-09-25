@@ -35,6 +35,14 @@ The **Marketing** tab breaks each date range down by source (TV, Radio, Facebook
 - **With live CRM data:** leads are attributed by the contact's source. Appointments, applications and sales follow their lead, and anything unmatched shows as "Other / unknown".
 - **With sample data:** each source has a realistic profile.
 
+## Geo
+
+The **Geo** tab shows the same measures as Marketing by **state** or **city**. Each row shows the **best source** in that place. You choose what "best" means (lowest cost per connected appointment, lowest cost per lead, best sales conversion, best connected appt %, fastest to application, or most leads). A source needs enough volume there to qualify. Click a place to see every source's numbers in it. The tab opens on Year to date because places need volume to compare fairly.
+
+- **With live CRM data:** places come from each lead's city and state. Appointments, applications and sales follow their lead, and leads without a place are grouped as "Unknown".
+- **Spend:** it isn't recorded by place, so each source's spend is shared across places in proportion to the leads it produced there.
+- **With sample data:** it uses fictional distributions around Sibley's Louisiana and Mississippi Gulf Coast market.
+
 ## Trends
 
 The **Trends** tab shows the last three years (or however many are entered) of **submitted, paid and chargebacks**. Each year shows its growth rate, its target and how far off target it is. For the current year it uses year-to-date numbers, compares growth on the full-year pace, and spells out **what it takes to hit the targets**: dollars needed per month versus the current pace, and the same gap in connected appointments and appointments set. It also covers appointments per year: appointments set, connected appointments, connected rate and paid production per connect.

@@ -67,7 +67,14 @@ export async function getLocation(creds: GhlCredentials) {
 }
 
 interface ContactSearchResponse {
-  contacts: { id: string; dateAdded: string; source?: string; attributionSource?: { utmSource?: string; medium?: string } }[];
+  contacts: {
+    id: string;
+    dateAdded: string;
+    source?: string;
+    city?: string;
+    state?: string;
+    attributionSource?: { utmSource?: string; medium?: string };
+  }[];
   total: number;
 }
 
@@ -75,6 +82,8 @@ export interface CrmContact {
   id: string;
   dateAdded: string;
   source: string;
+  city?: string;
+  state?: string;
 }
 
 /** Contacts created in [start, end). Returns the total plus creation dates (capped) for the daily trend. */
@@ -111,7 +120,13 @@ export async function contactsCreated(
       const t = new Date(c.dateAdded).getTime();
       if (t >= start.getTime() && t < end.getTime()) {
         dates.push(c.dateAdded);
-        contacts.push({ id: c.id, dateAdded: c.dateAdded, source: c.source || c.attributionSource?.utmSource || "" });
+        contacts.push({
+          id: c.id,
+          dateAdded: c.dateAdded,
+          source: c.source || c.attributionSource?.utmSource || "",
+          city: c.city,
+          state: c.state,
+        });
       }
     }
     if (!opts.withDates || (data.contacts ?? []).length < pageLimit) break;

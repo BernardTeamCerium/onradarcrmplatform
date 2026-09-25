@@ -1,25 +1,12 @@
 import { getDashboardData } from "@/lib/metrics";
 import { count, money, percent, shortDate } from "@/lib/format";
 import type { DateRange } from "@/lib/ranges";
+import { rates } from "@/lib/rates";
 import type { Client, SourceRow } from "@/lib/types";
 import { RangePicker } from "./RangePicker";
 import { SourceBars } from "./SourceBars";
 
-const ratio = (a: number, b: number) => (b > 0 ? a / b : null);
-
-function derived(r: SourceRow) {
-  // No spend recorded means we can't say what the source cost, so costs show as "—" rather than $0.
-  const spent = r.spend > 0;
-  return {
-    cpl: spent ? ratio(r.spend, r.leads) : null,
-    contactRate: ratio(r.conversations, r.leads),
-    connectRate: ratio(r.connected, r.apptsSet),
-    connectedPct: ratio(r.connected, r.leads),
-    cycleDays: ratio(r.cycleDaysSum, r.applicants),
-    costPerConnected: spent ? ratio(r.spend, r.connected) : null,
-    salesConversion: ratio(r.sales, r.leads),
-  };
-}
+const derived = rates;
 
 export async function MarketingView({ client, range, basePath }: { client: Client; range: DateRange; basePath: string }) {
   const data = await getDashboardData(client, range);
