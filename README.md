@@ -26,6 +26,20 @@ Every metric is compared with the previous period of the same length. Date range
 
 **Sibley Financial Group** is already set up with its crest logo (from sfg.onradarcrm.com) and a client login.
 
+## Leads and the Typeform quiz
+
+Each client has a **Leads** tab listing every quiz lead: name, phone, email, when they came in, their status (New, Contacted, Appointment set, Appointment held, No show, Application submitted, Sold, Not interested, Bad contact info) and **every quiz answer**. The page checks for new leads every 4 seconds. A new lead slides in with a pop-up, with no page refresh needed. Clients and admins can both update a lead's status.
+
+To connect a Typeform quiz (the site must be live, e.g. on Netlify):
+
+1. Admin → client → **Settings → Typeform quiz** shows the client's webhook URL and secret.
+2. In Typeform: open the quiz → **Connect → Webhooks → Add a webhook**, paste the URL, then **Edit** the webhook and paste the secret. Turn it on.
+3. Click **View deliveries → Send test request** in Typeform. The lead appears on the Leads page.
+
+Submissions without a valid Typeform signature are rejected, and repeat deliveries of the same response are ignored. Name, email and phone are taken from the quiz's name, email and phone questions automatically.
+
+Admins also have a **Send test lead** button on the Leads page that runs a realistic sample submission through the same parser. Use it to show a live lead arriving during a demo, and delete test leads afterwards. Sibley Financial Group starts with 14 fictional sample leads.
+
 ## Run it locally
 
 Requires Node 20+.

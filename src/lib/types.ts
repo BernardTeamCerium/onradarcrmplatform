@@ -56,6 +56,8 @@ export interface Client {
   averagePremium: number;
   /** Agent credited with submitted premium on the dashboard, e.g. "Troy Sibley". */
   primaryAgent?: string;
+  /** Shared secret used to verify Typeform webhook signatures for this client. */
+  typeformSecret: string;
   /** Figures entered by hand for a month. They replace sample data for that month. */
   figures: MonthlyFigures[];
   /** When true (or when no API token is set), the dashboard shows generated sample data. */
@@ -97,4 +99,39 @@ export interface DashboardData {
   source: "ghl" | "demo";
   fetchedAt: string;
   warnings: string[];
+}
+
+export const LEAD_STATUSES = [
+  "New",
+  "Contacted",
+  "Appointment set",
+  "Appointment held",
+  "No show",
+  "Application submitted",
+  "Sold",
+  "Not interested",
+  "Bad contact info",
+] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export interface QuizAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  /** Where the lead came from, e.g. the Typeform quiz title. */
+  source: string;
+  status: LeadStatus;
+  statusUpdatedAt: string;
+  receivedAt: string;
+  answers: QuizAnswer[];
+  /** Typeform response token, used to ignore duplicate webhook deliveries. */
+  externalId?: string;
+  test?: boolean;
 }

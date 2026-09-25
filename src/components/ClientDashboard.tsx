@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { getDashboardData } from "@/lib/metrics";
 import { count, money, shortDate } from "@/lib/format";
 import type { DateRange } from "@/lib/ranges";
 import type { Client, DailyPoint } from "@/lib/types";
-import { ClientLogo } from "./ClientLogo";
+import { ClientHeader } from "./ClientHeader";
+import { ClientTabs } from "./ClientTabs";
 import { Funnel } from "./Funnel";
 import { KpiGrid } from "./KpiGrid";
 import { RangePicker } from "./RangePicker";
@@ -42,26 +42,18 @@ export async function ClientDashboard({
 
   return (
     <div className="stack">
-      <div className="accent-bar" style={{ background: client.brandColor, marginBottom: 0 }} />
-      <div className="client-header">
-        <ClientLogo client={client} />
-        <div className="titles">
-          <h1>{client.name}</h1>
-          <p className="muted small">
-            {range.label} · {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)}
-          </p>
-        </div>
-        <div className="row">
-          {data.source === "ghl" ? (
-            <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live from OnRadar CRM</span>
-          ) : (
-            <span className="badge"><span className="dot" style={{ background: "var(--ink-muted)" }} />Sample data</span>
-          )}
-          {adminView && (
-            <Link className="btn sm" href={`/admin/clients/${client.id}/settings`}>Client settings</Link>
-          )}
-        </div>
-      </div>
+      <ClientHeader
+        client={client}
+        subtitle={`${range.label} · ${shortDate(range.start.toISOString().slice(0, 10))} – ${shortDate(lastDay)}`}
+      >
+        {data.source === "ghl" ? (
+          <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live from OnRadar CRM</span>
+        ) : (
+          <span className="badge"><span className="dot" style={{ background: "var(--ink-muted)" }} />Sample data</span>
+        )}
+      </ClientHeader>
+
+      <ClientTabs base={adminView ? `/admin/clients/${client.id}` : "/dashboard"} active="dashboard" admin={adminView} />
 
       <RangePicker basePath={basePath} active={range.key} />
 

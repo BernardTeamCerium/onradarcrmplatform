@@ -55,6 +55,18 @@ export const readLogo = (name: string) => readBytes(logoKey(name));
 export const writeLogo = (name: string, data: Buffer) => writeBytes(logoKey(name), data);
 export const deleteLogo = (name: string) => deleteBytes(logoKey(name));
 
+/** Generic JSON documents (used for per-client lead lists). */
+export async function readJson<T>(key: string): Promise<T | null> {
+  const raw = await readBytes(key);
+  return raw ? (JSON.parse(raw.toString("utf8")) as T) : null;
+}
+
+export const writeJson = (key: string, value: unknown) => writeBytes(key, JSON.stringify(value));
+
+export function randomSecret(bytes = 24) {
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString("base64url");
+}
+
 /** Session-signing secret: AUTH_SECRET if set, otherwise a random one generated and stored on first use. */
 let cachedSecret: string | null = null;
 export async function getAuthSecret() {
@@ -62,7 +74,7 @@ export async function getAuthSecret() {
   if (cachedSecret) return cachedSecret;
   const existing = await readBytes("auth-secret");
   if (existing) return (cachedSecret = existing.toString("utf8"));
-  const secret = Buffer.from(crypto.getRandomValues(new Uint8Array(48))).toString("base64url");
+  const secret = randomSecret(48);
   await writeBytes("auth-secret", secret);
   return (cachedSecret = secret);
 }
@@ -83,7 +95,8 @@ export function slugify(input: string) {
 const SIBLEY_SEPTEMBER = { id: "fig_sibley_2026_09", month: "2026-09", appointments: 36, premium: 5_600_000 };
 
 /** Upgrades data saved by older versions of the app (e.g. an already-deployed Netlify site). */
-function migrate(db: Database) {
+function migrate(db: Database): { db: Database; changed: boolean } {
+  let changed = false;
   for (const c of db.clients as (Client & { averageDealValue?: number })[]) {
     if (c.figures === undefined) {
       c.figures = c.id === "cl_sibley" ? [SIBLEY_SEPTEMBER] : [];
@@ -93,9 +106,13 @@ function migrate(db: Database) {
       }
     }
     if (c.averagePremium === undefined) c.averagePremium = c.averageDealValue ?? 0;
+    if (!c.typeformSecret) {
+      c.typeformSecret = randomSecret();
+      changed = true;
+    }
     delete c.averageDealValue;
   }
-  return db;
+  return { db, changed };
 }
 
 async function seed(): Promise<Database> {
@@ -115,6 +132,7 @@ async function seed(): Promise<Database> {
     spend: [],
     averagePremium: 250000,
     primaryAgent: "Troy Sibley",
+    typeformSecret: randomSecret(),
     figures: [SIBLEY_SEPTEMBER],
     demoMode: true,
     createdAt: now,
@@ -143,7 +161,12 @@ async function seed(): Promise<Database> {
 
 export async function readDb(): Promise<Database> {
   const raw = await readBytes(DB_KEY);
-  if (raw) return migrate(JSON.parse(raw.toString("utf8")) as Database);
+  if (raw) {
+    const { db, changed } = migrate(JSON.parse(raw.toString("utf8")) as Database);
+    // Persist generated values (like webhook secrets) so they stay stable between requests.
+    if (changed) await writeDb(db);
+    return db;
+  }
   const db = await seed();
   await writeDb(db);
   return db;

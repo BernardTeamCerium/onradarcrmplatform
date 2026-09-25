@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { ClientLogo } from "@/components/ClientLogo";
+import { ClientHeader } from "@/components/ClientHeader";
+import { ClientTabs } from "@/components/ClientTabs";
+import { regenerateTypeformSecret } from "@/app/actions/leads";
+import { headers } from "next/headers";
 import {
   addSpend,
   createUser,
@@ -42,6 +45,9 @@ export default async function ClientSettings({
   const here = `/admin/clients/${id}/settings`;
   const thisMonth = new Date().toISOString().slice(0, 7);
   const live = usesLiveData(client);
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  const webhookUrl = `${origin}/api/webhooks/typeform/${id}`;
 
   return (
     <AppShell user={user} active="overview">
@@ -49,14 +55,8 @@ export default async function ClientSettings({
         <p className="small">
           <Link href="/admin" className="muted">← All clients</Link>
         </p>
-        <div className="client-header">
-          <ClientLogo client={client} />
-          <div className="titles">
-            <h1>{client.name}</h1>
-            <p className="muted small">Client settings</p>
-          </div>
-          <Link className="btn" href={`/admin/clients/${id}`}>View dashboard</Link>
-        </div>
+        <ClientHeader client={client} subtitle="Client settings" />
+        <ClientTabs base={`/admin/clients/${id}`} active="settings" admin />
         {msg && <p className="flash" role="status">{msg}</p>}
 
         {/* Profile */}
@@ -186,6 +186,39 @@ export default async function ClientSettings({
               No marketing spend entered yet.{client.demoMode ? " Sample data uses generated spend until you add real numbers." : ""}
             </p>
           )}
+        </section>
+
+        {/* Typeform */}
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h2>Typeform quiz</h2>
+              <p className="muted small">
+                Every quiz submission shows up on the client&apos;s Leads page within seconds, with all of their answers.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/leads`}>Open leads</Link>
+          </div>
+          <ol className="small secondary" style={{ margin: "0 0 16px", paddingLeft: 18, display: "grid", gap: 4 }}>
+            <li>In Typeform, open the quiz and go to <b>Connect → Webhooks → Add a webhook</b>.</li>
+            <li>Paste the webhook URL below, then open the webhook&apos;s <b>Edit</b> settings and paste the secret.</li>
+            <li>Turn the webhook <b>on</b>, then click <b>View deliveries → Send test request</b> to check it.</li>
+          </ol>
+          <div className="form-grid">
+            <label className="field">
+              Webhook URL
+              <input readOnly value={webhookUrl} />
+            </label>
+            <label className="field">
+              Secret
+              <input readOnly value={client.typeformSecret} />
+              <span className="hint">Typeform signs every submission with this, so nobody else can post fake leads.</span>
+            </label>
+          </div>
+          <form action={regenerateTypeformSecret} style={{ marginTop: 12 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <button className="btn sm" type="submit">Create a new secret</button>
+          </form>
         </section>
 
         {/* Monthly figures */}

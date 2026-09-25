@@ -231,3 +231,54 @@ details.table-view summary { cursor: pointer; font-size: 13px; color: var(--ink-
 .demo-creds { font-size: 12px; color: var(--ink-muted); border-top: 1px solid var(--grid); margin-top: 18px; padding-top: 14px; }
 .demo-creds code { font-size: 12px; }
 .error { color: var(--bad); font-size: 13px; }
+
+/* ---------- Leads ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+.chip.on { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
+.leads-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { .leads-grid { grid-template-columns: 1fr; } }
+.lead-list { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
+.lead-list li + li { border-top: 1px solid var(--grid); }
+.lead-row {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left;
+  padding: 12px 16px; background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.lead-row:hover { background: var(--surface-2); }
+.lead-row.selected { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.lead-row.fresh { animation: fresh-flash 8s ease-out; }
+@keyframes fresh-flash { 0%, 30% { background: rgba(53, 230, 165, 0.22); } 100% { background: transparent; } }
+.lead-main { display: flex; flex-direction: column; min-width: 0; }
+.lead-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.new-tag { margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--navy); background: var(--green); border-radius: 4px; padding: 1px 5px; vertical-align: 2px; }
+.lead-detail { position: sticky; top: 76px; }
+@media (max-width: 960px) { .lead-detail { position: static; } }
+.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 12px 0; border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+.contact-grid a { color: var(--ink); font-weight: 550; word-break: break-all; }
+.qa { margin: 0; display: grid; gap: 0; }
+.qa > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+.qa > div:last-child { border-bottom: 0; }
+.qa dt { color: var(--ink-2); font-size: 14px; }
+.qa dd { margin: 0; font-weight: 600; font-size: 14px; }
+@media (max-width: 520px) { .qa > div { grid-template-columns: 1fr; gap: 2px; } }
+.live-dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(12, 163, 12, .45); } 50% { box-shadow: 0 0 0 5px rgba(12, 163, 12, 0); } }
+@media (prefers-reduced-motion: reduce) { .live-dot, .lead-row.fresh { animation: none; } }
+.toast {
+  position: fixed; right: 20px; bottom: 20px; z-index: 50; display: flex; align-items: center; gap: 12px;
+  background: var(--navy); color: #e8eef7; border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 32px rgba(0,0,0,.25);
+  max-width: calc(100vw - 32px); animation: toast-in .3s ease-out;
+}
+.toast .btn { background: transparent; color: #e8eef7; border-color: rgba(255,255,255,.25); }
+.toast .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 520px) { .toast { left: 16px; right: 16px; bottom: 16px; } }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--grid); }
+.tabs a { text-decoration: none; padding: 10px 14px; font-size: 14px; font-weight: 550; color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }

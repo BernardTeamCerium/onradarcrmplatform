@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
 import { clearMetricsCache } from "@/lib/metrics";
-import { deleteLogo, getClient, newId, slugify, updateDb, writeLogo } from "@/lib/store";
+import { deleteLogo, getClient, newId, randomSecret, slugify, updateDb, writeLogo } from "@/lib/store";
 import type { Client, Role } from "@/lib/types";
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
@@ -54,6 +54,7 @@ export async function createClient(form: FormData) {
       spend: [],
       averagePremium: Number(str(form, "averagePremium")) || 0,
       figures: [],
+      typeformSecret: randomSecret(),
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
     });
