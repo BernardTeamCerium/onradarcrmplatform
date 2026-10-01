@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
+import { leadFromEmail } from "@/lib/inbound";
 import { addLead, deleteLead, leadFromTypeform, sampleTypeformPayload, setLeadStatus } from "@/lib/leads";
 import { getClient, randomSecret, updateDb } from "@/lib/store";
 import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/types";
@@ -40,4 +41,32 @@ export async function regenerateTypeformSecret(form: FormData) {
   });
   revalidatePath(`/admin/clients/${id}/settings`);
   redirect(`/admin/clients/${id}/settings?msg=${encodeURIComponent("New webhook secret created. Update it in Typeform.")}`);
+}
+
+/** Admin pastes a lead email (subject + body) and it's added to the Leads tab. */
+export async function importEmailLead(form: FormData) {
+  await requireAdmin();
+  const id = String(form.get("clientId") ?? "");
+  const client = await getClient(id);
+  const back = (m: string) => `/admin/clients/${id}/settings?msg=${encodeURIComponent(m)}#email-leads`;
+  if (!client) redirect(back("Unknown client."));
+  const lead = leadFromEmail(client, {
+    subject: String(form.get("subject") ?? ""),
+    from: String(form.get("from") ?? ""),
+    text: String(form.get("body") ?? ""),
+  });
+  if (!lead.email && !lead.phone) redirect(back("Couldn't find an email address or phone number in that email."));
+  const saved = await addLead(id, { ...lead, channel: "manual" });
+  redirect(back(`Added ${saved.name} to Leads (${saved.source}).`));
+}
+
+export async function regenerateInboundKey(form: FormData) {
+  await requireAdmin();
+  const id = String(form.get("clientId") ?? "");
+  await updateDb((db) => {
+    const c = db.clients.find((x) => x.id === id);
+    if (c) c.inboundKey = randomSecret();
+  });
+  revalidatePath(`/admin/clients/${id}/settings`);
+  redirect(`/admin/clients/${id}/settings?msg=${encodeURIComponent("New key created. Update the Gmail script and any tools that send leads.")}#email-leads`);
 }

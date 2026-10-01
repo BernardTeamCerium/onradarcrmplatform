@@ -59,6 +59,7 @@ export async function createClient(form: FormData) {
       agents: [],
       timeZone: "America/Chicago",
       typeformSecret: randomSecret(),
+      inboundKey: randomSecret(),
       demoMode: !str(form, "apiToken"),
       createdAt: new Date().toISOString(),
     });

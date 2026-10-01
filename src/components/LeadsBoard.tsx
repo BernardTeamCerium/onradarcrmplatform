@@ -214,6 +214,7 @@ export function LeadsBoard({
                         {l.name}
                         {fresh.has(l.id) && <span className="new-tag">NEW</span>}
                         {l.test && <span className="muted small"> · test</span>}
+                        {(l.channel === "email" || l.channel === "manual") && <span className="muted small"> · email</span>}
                       </span>
                       <span className="muted small">
                         {l.source} · {ago(l.receivedAt, now)}
@@ -257,12 +258,16 @@ export function LeadsBoard({
                   {selected.email ? <a href={`mailto:${selected.email}`}>{selected.email}</a> : <span className="muted">—</span>}
                 </div>
                 <div>
+                  <div className="muted small">Location</div>
+                  <span>{selected.city || selected.state ? [selected.city, selected.state].filter(Boolean).join(", ") : "—"}</span>
+                </div>
+                <div>
                   <div className="muted small">Status updated</div>
                   <span>{ago(selected.statusUpdatedAt, now)}</span>
                 </div>
               </div>
               <div>
-                <h3 style={{ marginBottom: 8 }}>Quiz responses</h3>
+                <h3 style={{ marginBottom: 8 }}>{selected.channel === "email" || selected.channel === "manual" ? "Details from the email" : "Quiz responses"}</h3>
                 <dl className="qa">
                   {selected.answers.map((a, i) => (
                     <div key={i}>

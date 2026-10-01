@@ -109,6 +109,8 @@ export interface Client {
   primaryAgent?: string;
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
+  /** Key that lets the Gmail script and other tools post leads for this client. */
+  inboundKey: string;
   /** Agents whose calendars show on the Calendar tab. */
   agents: Agent[];
   /** IANA time zone for the client's calendar, e.g. America/Chicago. */
@@ -195,13 +197,17 @@ export interface Lead {
   name: string;
   email?: string;
   phone?: string;
-  /** Where the lead came from, e.g. the Typeform quiz title. */
+  city?: string;
+  state?: string;
+  /** Where the lead came from, e.g. the Typeform quiz title, "Lead Seller #1" or "Email". */
   source: string;
   status: LeadStatus;
   statusUpdatedAt: string;
   receivedAt: string;
   answers: QuizAnswer[];
-  /** Typeform response token, used to ignore duplicate webhook deliveries. */
+  /** How the lead arrived. */
+  channel?: "typeform" | "email" | "api" | "manual";
+  /** Typeform response token or email Message-ID, used to ignore duplicate deliveries. */
   externalId?: string;
   test?: boolean;
 }

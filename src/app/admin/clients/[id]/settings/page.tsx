@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ClientHeader } from "@/components/ClientHeader";
 import { ClientTabs } from "@/components/ClientTabs";
-import { regenerateTypeformSecret } from "@/app/actions/leads";
+import { importEmailLead, regenerateInboundKey, regenerateTypeformSecret } from "@/app/actions/leads";
+import { gmailScript } from "@/lib/inbound";
 import { headers } from "next/headers";
 import {
   addSpend,
@@ -55,6 +56,8 @@ export default async function ClientSettings({
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const webhookUrl = `${origin}/api/webhooks/typeform/${id}`;
+  const emailUrl = `${origin}/api/leads/${id}/email?key=${client.inboundKey}`;
+  const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
 
   return (
     <AppShell user={user} active="overview">
@@ -301,6 +304,68 @@ export default async function ClientSettings({
           <form action={regenerateTypeformSecret} style={{ marginTop: 12 }}>
             <input type="hidden" name="clientId" value={id} />
             <button className="btn sm" type="submit">Create a new secret</button>
+          </form>
+        </section>
+
+        {/* Email leads */}
+        <section className="card" id="email-leads">
+          <div className="card-head">
+            <div>
+              <h2>Email leads (Gmail)</h2>
+              <p className="muted small">
+                Lead emails from vendors land on the Leads tab automatically. The reader picks out name, email, phone, city, state and source
+                from lines like &ldquo;Phone: 985-555-0142&rdquo;, and keeps every other line as an answer.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/leads`}>Open leads</Link>
+          </div>
+          <h3 style={{ marginBottom: 6 }}>Set up Gmail (one time, about 5 minutes)</h3>
+          <ol className="small secondary" style={{ margin: "0 0 12px", paddingLeft: 18, display: "grid", gap: 4 }}>
+            <li>Sign in to the Gmail account that receives the lead emails, then open <b>script.google.com</b> → <b>New project</b>.</li>
+            <li>Delete what&apos;s there, paste the script below, and click <b>Save</b>.</li>
+            <li>Choose <b>setup</b> in the function menu and click <b>Run</b>. Approve the Google permissions it asks for.</li>
+            <li>
+              In Gmail, create a filter for the vendor&apos;s emails (for example <i>from:leads@vendor.com</i>) with <b>Apply the label</b> → <b>OnRadar Leads</b>.
+              You can also add that label to any email by hand.
+            </li>
+            <li>Every 5 minutes, labelled emails are sent here and moved to <b>OnRadar Leads/Imported</b>.</li>
+          </ol>
+          <label className="field">
+            Gmail script for {client.name}
+            <textarea readOnly rows={10} value={gmailScript(emailUrl)} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+            <span className="hint">The script contains this client&apos;s private key, so only paste it into your own Google account.</span>
+          </label>
+          <details style={{ marginTop: 12 }}>
+            <summary className="small" style={{ cursor: "pointer" }}>Other ways to send leads (Zapier, lead vendors, email services)</summary>
+            <div className="form-grid" style={{ marginTop: 10 }}>
+              <label className="field">
+                Lead email address URL
+                <input readOnly value={emailUrl} />
+                <span className="hint">POST subject, from, text and/or html (Postmark and Mailgun inbound work as-is)</span>
+              </label>
+              <label className="field">
+                Lead webhook URL (fields)
+                <input readOnly value={inboundUrl} />
+                <span className="hint">POST fields like first_name, last_name, email, phone, city, state, source; add &amp;source=Facebook to set a source</span>
+              </label>
+            </div>
+            <form action={regenerateInboundKey} style={{ marginTop: 8 }}>
+              <input type="hidden" name="clientId" value={id} />
+              <button className="btn sm" type="submit">Create a new key</button>
+            </form>
+          </details>
+          <h3 style={{ margin: "18px 0 6px" }}>Or paste a lead email</h3>
+          <form action={importEmailLead} className="stack" style={{ gap: 10 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <div className="form-grid">
+              <label className="field">Subject<input name="subject" placeholder="New lead: Margaret Doucet" /></label>
+              <label className="field">From<input name="from" placeholder="Lead Seller #1 <leads@vendor.com>" /></label>
+            </div>
+            <label className="field">
+              Email body
+              <textarea name="body" rows={6} required placeholder={"First Name: Margaret\nLast Name: Doucet\nPhone: (985) 555-0142\nEmail: margaret@example.com\nCity: Covington\nState: LA\nRetirement savings: $500k-$1M"} style={{ height: "auto", padding: 10 }} />
+            </label>
+            <div className="form-actions" style={{ marginTop: 0 }}><button className="btn primary" type="submit">Add to Leads</button></div>
           </form>
         </section>
 

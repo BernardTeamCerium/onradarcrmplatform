@@ -77,6 +77,15 @@ Submissions without a valid Typeform signature are rejected, and repeat deliveri
 
 Admins also have a **Send test lead** button on the Leads page that runs a realistic sample submission through the same parser. Use it to show a live lead arriving during a demo, and delete test leads afterwards. Sibley Financial Group starts with 14 fictional sample leads.
 
+## Email leads (Gmail) and other lead feeds
+
+Lead notification emails can flow into the Leads tab automatically. Admin → client → **Settings → Email leads (Gmail)** has:
+
+- **A ready-made Google Apps Script** with the client's address and key filled in. Paste it into script.google.com in the Gmail account that receives lead emails and run `setup` once. Then label lead emails **OnRadar Leads**, by hand or with a Gmail filter. Every 5 minutes the script sends labelled emails to the dashboard and moves them to **OnRadar Leads/Imported**.
+- **The email reader** picks out name, email, phone, city, state, ZIP and source from "Label: value" lines and HTML tables, ignores forwarded-message headers, keeps every other field as an answer, and skips emails it has already received. The source comes from a "Source"/"Lead source" line, otherwise from the sender or subject matched against the client's marketing sources.
+- **A general lead webhook** (`/api/leads/<clientId>/inbound?key=…`) for Zapier, Make or lead vendors. It takes fields like first_name, last_name, email, phone, city, state and source, and `&source=Facebook` sets the source.
+- **A "paste a lead email" box** for one-off imports.
+
 ## Run it locally
 
 Requires Node 20+.

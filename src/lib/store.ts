@@ -151,6 +151,10 @@ function migrate(db: Database): { db: Database; changed: boolean } {
       }
     }
     if (c.averagePremium === undefined) c.averagePremium = c.averageDealValue ?? 0;
+    if (!c.inboundKey) {
+      c.inboundKey = randomSecret();
+      changed = true;
+    }
     if (!c.typeformSecret) {
       c.typeformSecret = randomSecret();
       changed = true;
@@ -178,6 +182,7 @@ async function seed(): Promise<Database> {
     averagePremium: 250000,
     primaryAgent: "Troy Sibley",
     typeformSecret: randomSecret(),
+    inboundKey: randomSecret(),
     figures: [SIBLEY_SEPTEMBER],
     yearly: SIBLEY_YEARLY,
     sources: DEFAULT_SOURCES,
