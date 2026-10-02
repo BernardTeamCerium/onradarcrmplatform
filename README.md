@@ -61,6 +61,12 @@ The **Geo** tab shows the same measures as Marketing by **state** or **city**. E
 The **Production** tab is where Sibley's team (any client login) and admins record production:
 
 - **Log a case:** date submitted, client, agent, product, carrier, premium, status and lead source. Change the status from Submitted to Paid, Chargeback or Declined in the list; it saves immediately and stamps the paid or chargeback date.
+- **Case status emails:** IMO or carrier status emails (e.g. Allied Elite Financial's "Status Update- Transfer *Funds En Route* TB00071984: …") are read for the case number, carrier, product, advisor, client, premium, the status in the subject, and the message itself.
+  - The first email for a case number adds the case. Later emails update it, and each case keeps a history of its email updates.
+  - "Issued", "Paid" or "Placed" marks a case paid. "Declined", "Withdrawn" or "Not taken" marks it declined. A cancellation after payment is a chargeback.
+  - An older email never moves a case backwards, and the same email is never applied twice.
+  - The advisor is matched to an agent by name, so "Christopher Troy Sibley" counts for Troy Sibley.
+  - Emails arrive automatically through a Gmail label (**Settings → Production emails**, label `OnRadar Production`, script and filter provided), or anyone can paste one on the Production tab. Services like Zapier or Postmark can POST to `/api/production/<clientId>/email?key=…`.
 - **Historical numbers:** enter totals per agent for a month or a whole year (submitted, paid, chargebacks, number of cases), or import a CSV of past cases or totals. Download the templates from the tab; Excel and Google Sheets both save CSV. Importing the same totals again updates them, and identical cases aren't added twice. Rows that can't be read are listed by row number.
 - **Totals:** by year, all time and by agent. There's also a CSV export of everything.
 

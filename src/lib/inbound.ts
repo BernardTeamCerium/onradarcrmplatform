@@ -63,8 +63,9 @@ export function leadFromFields(
   };
 }
 
-function htmlToText(html: string) {
+export function htmlToText(html: string) {
   return html
+    .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, "")
     .replace(/<(br|\/p|\/div|\/tr|\/li|\/h\d)[^>]*>/gi, "\n")
     .replace(/<\/t[dh]>\s*<t[dh][^>]*>/gi, ": ")
     .replace(/<[^>]+>/g, "")
@@ -115,12 +116,12 @@ export function leadFromEmail(
 }
 
 /** The Google Apps Script the admin pastes into script.google.com to forward labelled Gmail messages. */
-export function gmailScript(endpoint: string, label = "OnRadar Leads") {
+export function gmailScript(endpoint: string, label = "OnRadar Leads", what = "lead emails", tab = "Leads tab") {
   return `/**
- * OnRadar CRM: send lead emails from Gmail to the Leads tab.
+ * OnRadar CRM: send ${what} from Gmail to the ${tab}.
  * 1. Paste this into a new project at https://script.google.com and save.
  * 2. Run "setup" once and approve access. It creates the Gmail labels and a 5-minute timer.
- * 3. In Gmail, add the label "${label}" to lead emails (or create a filter that does it).
+ * 3. In Gmail, add the label "${label}" to ${what} (or create a filter that does it).
  */
 const ENDPOINT = ${JSON.stringify(endpoint)};
 const LABEL = ${JSON.stringify(label)};

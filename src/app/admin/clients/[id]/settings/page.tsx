@@ -61,6 +61,7 @@ export default async function ClientSettings({
   const webhookUrl = `${origin}/api/webhooks/typeform/${id}`;
   const emailUrl = `${origin}/api/leads/${id}/email?key=${client.inboundKey}`;
   const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
+  const productionEmailUrl = `${origin}/api/production/${id}/email?key=${client.inboundKey}`;
   const sampleLeadCount = (await listLeads(id)).filter(isSampleLead).length;
   const sampleProduction = (await loadProduction(client)).filter((e) => e.sample).length;
   const sampleAgents = client.agents.filter(isSampleAgent);
@@ -472,6 +473,45 @@ export default async function ClientSettings({
             </label>
             <div className="form-actions" style={{ marginTop: 0 }}><button className="btn primary" type="submit">Add to Leads</button></div>
           </form>
+        </section>
+
+        {/* Production emails */}
+        <section className="card" id="production-email">
+          <div className="card-head">
+            <div>
+              <h2>Production emails (Gmail)</h2>
+              <p className="muted small">
+                Case status emails from the IMO or carrier update the Production tab automatically. Each email is read for the case number,
+                carrier, product, advisor, client, premium and the status in the subject. A new case number adds a case, and later emails for the
+                same number update it (an &ldquo;Issued&rdquo; or &ldquo;Paid&rdquo; status marks it paid). The advisor is matched to an agent by name, so
+                &ldquo;Christopher Troy Sibley&rdquo; is credited to Troy Sibley.
+              </p>
+            </div>
+            <Link className="btn sm" href={`/admin/clients/${id}/production`}>Open production</Link>
+          </div>
+          <h3 style={{ marginBottom: 6 }}>Set up Gmail (one time, about 5 minutes)</h3>
+          <ol className="small secondary" style={{ margin: "0 0 12px", paddingLeft: 18, display: "grid", gap: 4 }}>
+            <li>In the Gmail account that receives the status emails, open <b>script.google.com</b> → <b>New project</b> (a separate project from the lead script).</li>
+            <li>Paste the script below, click <b>Save</b>, choose <b>setup</b> and click <b>Run</b>. Approve the Google permissions.</li>
+            <li>
+              In Gmail, create a filter that matches the status emails, for example <i>from:(@retireaef.com) subject:(&quot;Status Update&quot;)</i>, with{" "}
+              <b>Apply the label</b> → <b>OnRadar Production</b>. Tick <b>Also apply filter to matching conversations</b> to bring in past emails too.
+            </li>
+            <li>Every 5 minutes, labelled emails are sent here and moved to <b>OnRadar Production/Imported</b>.</li>
+          </ol>
+          <label className="field">
+            Gmail script for {client.name}
+            <textarea readOnly rows={10} value={gmailScript(productionEmailUrl, "OnRadar Production", "case status emails", "Production tab")} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+            <span className="hint">The script contains this client&apos;s private key, so only paste it into your own Google account. Anyone can also paste a single email on the Production tab.</span>
+          </label>
+          <details style={{ marginTop: 12 }}>
+            <summary className="small" style={{ cursor: "pointer" }}>Other ways to send status emails (Zapier, email services)</summary>
+            <label className="field" style={{ marginTop: 10 }}>
+              Production email URL
+              <input readOnly value={productionEmailUrl} />
+              <span className="hint">POST subject, from, date, text and/or html (Postmark and Mailgun inbound work as-is)</span>
+            </label>
+          </details>
         </section>
 
         {/* Yearly results */}

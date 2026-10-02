@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { applyCaseEmail, looksLikeCase, parseCaseEmail } from "@/lib/caseEmail";
 import { clearMetricsCache } from "@/lib/metrics";
 import { entriesFromCsv, matchAgent, mergeImport, normaliseStatus, parseDate, parsePeriod, withProduction } from "@/lib/production";
 import { getClient, newId } from "@/lib/store";
@@ -158,4 +159,24 @@ export async function clearSampleProduction(form: FormData) {
     return n;
   });
   done(clientId, back, `Removed ${removed} sample entries.`);
+}
+
+/** A pasted case status email (copied from Gmail or Outlook, headers and all). */
+export async function importCaseEmail(form: FormData) {
+  const clientId = str(form, "clientId");
+  const { user, client } = await access(clientId);
+  const back = safeBack(form);
+  const body = str(form, "body");
+  if (!body) done(clientId, back, "Paste the email first.");
+  const parsed = parseCaseEmail({ subject: str(form, "subject") || undefined, text: body });
+  if (!looksLikeCase(parsed)) done(clientId, back, "Couldn't find a case number or premium in that email.");
+  const { action, entry } = await applyCaseEmail(client, parsed, user.name);
+  const what = `${entry.clientName ?? "case"}${entry.caseNumber ? ` (${entry.caseNumber})` : ""}`;
+  done(
+    clientId,
+    back,
+    action === "duplicate"
+      ? `That email was already imported for ${what}.`
+      : `${action === "created" ? "Added" : "Updated"} ${what} for ${entry.agentName}: ${entry.carrierStatus ?? entry.status}.`,
+  );
 }

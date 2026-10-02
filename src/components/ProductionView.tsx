@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { addCase, addTotal, clearSampleProduction, importProduction } from "@/app/actions/production";
+import { addCase, addTotal, clearSampleProduction, importCaseEmail, importProduction } from "@/app/actions/production";
 import { count, money, moneyShort, percent } from "@/lib/format";
 import { loadProduction, productionYears, totalsByAgent, totalsByYear } from "@/lib/production";
 import { CASE_STATUSES, PRODUCTS, type Client } from "@/lib/types";
@@ -101,6 +101,29 @@ export async function ProductionView({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card" id="case-email">
+        <div className="card-head">
+          <div>
+            <h2>Import a case status email</h2>
+            <p className="muted small">
+              Paste a status email from the IMO or carrier (for example &ldquo;Status Update- Transfer *Funds En Route*&rdquo;). The case number,
+              carrier, product, advisor, client and premium are read from it. A new case number adds the case, and later emails for the same
+              number update its status. Status emails can also arrive automatically from Gmail (set up by your OnRadar account manager).
+            </p>
+          </div>
+        </div>
+        <form action={importCaseEmail} className="stack" style={{ gap: 10 }}>
+          <input type="hidden" name="clientId" value={client.id} />
+          <input type="hidden" name="returnTo" value={here} />
+          <label className="field">Subject<input name="subject" placeholder="Status Update- Transfer *Funds En Route* TB00071984: Veraea Cravens SILAC" /><span className="hint">Optional if the pasted text includes the Subject: line</span></label>
+          <label className="field">
+            Email
+            <textarea name="body" rows={6} required placeholder={"Number   TB00071984\nCarrier   SILAC\nProduct   Teton Bonus\nAdvisor   Christopher Troy Sibley\nClients   Veraea Cravens\nPremium   $422,276.00 (Initial)\n\nApplication is in good order..."} style={{ height: "auto", padding: 10 }} />
+          </label>
+          <div className="form-actions" style={{ marginTop: 0 }}><button className="btn primary" type="submit">Import email</button></div>
+        </form>
       </section>
 
       <section className="card">

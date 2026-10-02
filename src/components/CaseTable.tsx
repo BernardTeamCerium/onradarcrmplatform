@@ -15,13 +15,13 @@ export function CaseTable({ clientId, entries }: { clientId: string; entries: Pr
   const [pending, start] = useTransition();
   const [filter, setFilter] = useState("");
   const shown = rows.filter((r) =>
-    !filter || [r.clientName, r.agentName, r.carrier, r.product, r.status, r.source].some((v) => v?.toLowerCase().includes(filter.toLowerCase())),
+    !filter || [r.clientName, r.agentName, r.carrier, r.product, r.status, r.source, r.caseNumber, r.carrierStatus].some((v) => v?.toLowerCase().includes(filter.toLowerCase())),
   );
   if (rows.length === 0) return <p className="muted" style={{ padding: 20 }}>No cases logged for this period yet.</p>;
   return (
     <>
       <div style={{ padding: "0 20px 10px" }}>
-        <input type="search" placeholder="Search client, agent, carrier, product…" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 360 }} aria-label="Search cases" />
+        <input type="search" placeholder="Search client, case number, agent, carrier…" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 360 }} aria-label="Search cases" />
       </div>
       <div className="table-wrap">
         <table className="compact">
@@ -46,6 +46,7 @@ export function CaseTable({ clientId, entries }: { clientId: string; entries: Pr
                 <td>
                   <b>{r.clientName ?? "—"}</b>
                   {r.sample && <span className="muted small"> · sample</span>}
+                  {r.caseNumber && <div className="muted small">#{r.caseNumber}</div>}
                 </td>
                 <td>{r.agentName}</td>
                 <td>{r.product ?? "—"}</td>
@@ -70,6 +71,25 @@ export function CaseTable({ clientId, entries }: { clientId: string; entries: Pr
                       ))}
                     </select>
                   </span>
+                  {r.carrierStatus && <div className="small secondary" style={{ marginTop: 4, maxWidth: 220 }}>{r.carrierStatus}</div>}
+                  {r.updates && r.updates.length > 0 && (
+                    <details className="small" style={{ marginTop: 2, maxWidth: 320 }}>
+                      <summary className="muted" style={{ cursor: "pointer" }}>
+                        {r.updates.length} email update{r.updates.length === 1 ? "" : "s"}
+                      </summary>
+                      <ol style={{ margin: "6px 0 0", paddingLeft: 16, display: "grid", gap: 6 }}>
+                        {[...r.updates].reverse().map((u, i) => (
+                          <li key={u.ref ?? i}>
+                            <b>{u.status}</b>{" "}
+                            <span className="muted">
+                              {new Date(u.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                            {u.note && <div className="secondary" style={{ whiteSpace: "pre-line" }}>{u.note}</div>}
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
                 </td>
                 <td>{date(r.paidDate)}</td>
                 <td>{r.source ?? "—"}</td>

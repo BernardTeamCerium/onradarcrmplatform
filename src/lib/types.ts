@@ -367,6 +367,16 @@ export const PRODUCTS = [
   "Other",
 ] as const;
 
+export interface CaseUpdate {
+  /** ISO time the update was sent. */
+  at: string;
+  status: string;
+  note?: string;
+  from?: string;
+  /** Email Message-ID (or a hash), so the same email is never applied twice. */
+  ref?: string;
+}
+
 /**
  * One line of production: either a single case (kind "case") or a historical total for an agent over a
  * month or year (kind "summary"), used to load history that isn't available case by case.
@@ -390,6 +400,12 @@ export interface ProductionEntry {
   chargebackAmount?: number;
   source?: string;
   notes?: string;
+  /** Carrier / IMO case or policy number (e.g. TB00071984); status emails are matched on it. */
+  caseNumber?: string;
+  /** Latest status wording from the carrier or IMO, e.g. "Transfer - Funds En Route". */
+  carrierStatus?: string;
+  /** Status updates read from emails, oldest first. */
+  updates?: CaseUpdate[];
   // Summary fields
   /** "YYYY" or "YYYY-MM". */
   period?: string;
