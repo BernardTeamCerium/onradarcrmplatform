@@ -128,7 +128,7 @@ The login page lists the demo emails. Set `SHOW_DEMO_LOGINS=false` to hide them.
 4. In OnRadar, go to **Admin → client → Settings → GoHighLevel connection**, paste both, untick **Show sample data**, save, then click **Test connection**.
 5. Check **Application stage keywords** against the client's pipeline stage names. The default keywords are `application, submitted`.
 
-Until a client is connected, the dashboard shows realistic **sample data**, clearly badged as such, so you can demo the product before the integration is live. If GoHighLevel can't be reached, the dashboard shows a warning and falls back to sample data instead of breaking.
+While a client is in demo, the dashboard shows realistic **sample data**, clearly badged as such. Once a client is live (see **Going live** below) sample data is never shown: if the CRM can't be reached, the dashboard shows a warning and counts from the Leads tab instead.
 
 Results are cached for 5 minutes per client and date range. Saving a client's settings clears the cache.
 
@@ -146,6 +146,20 @@ Optional environment variables (Site configuration → Environment variables): `
 ### Other hosts
 
 Anywhere else, data is saved on disk under `DATA_DIR` (default `./data`), so use a host with a persistent disk. Then run `npm run build && npm start`.
+
+## Going live
+
+Open the client's **Settings → Go live**, type `GO LIVE` and confirm. In one step this:
+
+- turns off sample dashboard numbers and sample calendar appointments
+- deletes the sample and test leads (and any bookings made for them)
+- deletes the sample production entries, the monthly figure overrides and the sample agents
+
+The yearly results, marketing spend, logged production, real leads and all settings are kept. The section lists exactly what's still in place before you confirm.
+
+A live client with the CRM connected gets its numbers from the CRM. Without the CRM, the dashboard counts leads from the Leads tab (Typeform, Gmail and webhook leads) and moves them through the funnel by status. Spend comes from what you enter and premium from the Production tab. Texts, emails and calls start counting once the CRM is connected.
+
+Before sharing the site, also set `SHOW_DEMO_LOGINS=false` and change the starting passwords in **Admin → Users**.
 
 ## Project layout
 

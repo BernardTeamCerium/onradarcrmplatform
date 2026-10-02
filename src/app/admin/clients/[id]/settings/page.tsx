@@ -12,6 +12,7 @@ import {
   deleteFigures,
   deleteYear,
   deleteClient,
+  goLive,
   deleteSpend,
   deleteUser,
   removeLogo,
@@ -27,7 +28,9 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { usesLiveData } from "@/lib/metrics";
-import { readDb } from "@/lib/store";
+import { isSampleAgent, readDb } from "@/lib/store";
+import { isSampleLead, listLeads } from "@/lib/leads";
+import { loadProduction } from "@/lib/production";
 import type { YearRecord } from "@/lib/types";
 
 const BLANK_YEAR: YearRecord = { year: 0, submitted: 0, paid: 0, chargebacks: 0, apptsSet: 0, connectedAppts: 0 };
@@ -58,6 +61,17 @@ export default async function ClientSettings({
   const webhookUrl = `${origin}/api/webhooks/typeform/${id}`;
   const emailUrl = `${origin}/api/leads/${id}/email?key=${client.inboundKey}`;
   const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
+  const sampleLeadCount = (await listLeads(id)).filter(isSampleLead).length;
+  const sampleProduction = (await loadProduction(client)).filter((e) => e.sample).length;
+  const sampleAgents = client.agents.filter(isSampleAgent);
+  const leftovers = [
+    client.demoMode && "sample dashboard numbers are on",
+    client.calendarSamples !== false && "sample appointments are on",
+    sampleLeadCount && `${sampleLeadCount} sample/test lead${sampleLeadCount === 1 ? "" : "s"}`,
+    sampleProduction && `${sampleProduction} sample production entr${sampleProduction === 1 ? "y" : "ies"}`,
+    client.figures.length && `${client.figures.length} monthly figure override${client.figures.length === 1 ? "" : "s"}`,
+    sampleAgents.length && `sample agent${sampleAgents.length === 1 ? "" : "s"} ${sampleAgents.map((a) => a.name).join(", ")}`,
+  ].filter(Boolean) as string[];
 
   return (
     <AppShell user={user} active="overview">
@@ -68,6 +82,44 @@ export default async function ClientSettings({
         <ClientHeader client={client} subtitle="Client settings" />
         <ClientTabs base={`/admin/clients/${id}`} active="settings" admin />
         {msg && <p className="flash" role="status">{msg}</p>}
+
+        {/* Go live */}
+        <section className="card" id="go-live">
+          <div className="card-head">
+            <div>
+              <h2>Go live</h2>
+              <p className="muted small">
+                {leftovers.length
+                  ? "Turns off sample data everywhere and removes every piece of it in one step. Yearly results, marketing spend, logged production, real leads and all settings are kept."
+                  : "This client is live: no sample data is shown or stored."}
+              </p>
+            </div>
+            <span className="badge">
+              <span className="dot" style={{ background: client.demoMode ? "var(--ink-muted)" : "var(--good)" }} />
+              {client.demoMode ? "Demo" : live ? "Live from CRM" : "Live"}
+            </span>
+          </div>
+          {leftovers.length > 0 && (
+            <>
+              <p className="small">Still in place: {leftovers.join("; ")}.</p>
+              {!client.ghl.apiToken && (
+                <p className="notice small">
+                  The CRM isn&apos;t connected yet. Once live, the dashboard counts leads from the Leads tab (Typeform, Gmail and
+                  webhook leads) and moves them through the funnel by status, with your entered spend and production. Texts, emails
+                  and calls start counting when the CRM is connected.
+                </p>
+              )}
+              <form action={goLive} className="row" style={{ alignItems: "flex-end" }}>
+                <input type="hidden" name="clientId" value={id} />
+                <label className="field">
+                  Type GO LIVE to confirm
+                  <input name="confirm" autoComplete="off" placeholder="GO LIVE" required />
+                </label>
+                <button className="btn primary" type="submit">Go live</button>
+              </form>
+            </>
+          )}
+        </section>
 
         {/* Profile */}
         <section className="card">

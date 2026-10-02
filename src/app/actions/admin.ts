@@ -5,8 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
+import { withBooked } from "@/lib/appointments";
+import { removeSampleLeads } from "@/lib/leads";
 import { clearMetricsCache } from "@/lib/metrics";
-import { DEFAULT_SOURCES, deleteLogo, getClient, newId, randomSecret, slugify, updateDb, writeLogo } from "@/lib/store";
+import { withProduction } from "@/lib/production";
+import { DEFAULT_SOURCES, deleteLogo, isSampleAgent, getClient, newId, randomSecret, slugify, updateDb, writeLogo } from "@/lib/store";
 import type { Client, Role } from "@/lib/types";
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
@@ -289,6 +292,51 @@ export async function saveAgents(form: FormData) {
     c.calendarSamples = form.get("calendarSamples") === "on";
   });
   redirect(settingsPath(id, "Agents saved.") + "#agents");
+}
+
+/**
+ * Takes a client out of demo: sample data is switched off everywhere and every piece of sample data is removed
+ * (sample/test leads and their bookings, sample production entries, monthly figure overrides, sample agents).
+ * Real entries (yearly results, spend, logged production, real leads, settings) are kept.
+ */
+export async function goLive(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  if (str(form, "confirm").toUpperCase() !== "GO LIVE") redirect(settingsPath(id, "Type GO LIVE to confirm.") + "#go-live");
+  const client = await getClient(id);
+  if (!client) redirect("/admin");
+
+  const leadIds = new Set(await removeSampleLeads(id));
+  const bookings = await withBooked(id, (list) => {
+    const before = list.length;
+    for (let i = list.length - 1; i >= 0; i--) if (leadIds.has(list[i].leadId)) list.splice(i, 1);
+    return before - list.length;
+  });
+  const production = await withProduction(client, (entries) => {
+    const before = entries.length;
+    for (let i = entries.length - 1; i >= 0; i--) if (entries[i].sample) entries.splice(i, 1);
+    return before - entries.length;
+  });
+  let figures = 0;
+  let agents = 0;
+  await mutateClient(id, (c) => {
+    figures = c.figures.length;
+    agents = c.agents.filter(isSampleAgent).length;
+    c.figures = [];
+    c.agents = c.agents.filter((a) => !isSampleAgent(a));
+    c.demoMode = false;
+    c.calendarSamples = false;
+  });
+
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const removed = [
+    plural(leadIds.size, "sample lead"),
+    bookings && plural(bookings, "booking"),
+    plural(production, "sample production entry").replace("entrys", "entries"),
+    figures && plural(figures, "monthly figure override"),
+    agents && plural(agents, "sample agent"),
+  ].filter(Boolean);
+  redirect(settingsPath(id, `${client.name} is live. Removed ${removed.join(", ")}.`));
 }
 
 export async function deleteClient(form: FormData) {

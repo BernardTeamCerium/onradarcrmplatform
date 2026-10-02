@@ -363,7 +363,7 @@ export async function getCalendarWeek(client: Client, start: string): Promise<Ca
       console.error(`Calendar failed for ${client.id}:`, err);
       warnings.push("Live calendar is temporarily unavailable.");
     }
-  } else if (client.calendarSamples !== false) {
+  } else if (client.demoMode && client.calendarSamples !== false) {
     base = dates.flatMap((date) => sampleDay(client, date, today)).map((a) => ({ ...a, origin: "sample" as const }));
     parts.push("Sample data");
   }
@@ -408,7 +408,7 @@ export async function getAppointment(client: Client, id: string) {
     return null;
   }
   const [date] = id.split("~");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (!client.demoMode || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const appt = sampleDay(client, date, nowIn(client.timeZone)).find((a) => a.id === id);
   return appt ? { appt: { ...appt, origin: "sample" as const }, agents: client.agents } : null;
 }

@@ -48,6 +48,8 @@ export async function ClientDashboard({
       >
         {data.source === "ghl" ? (
           <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live from OnRadar CRM</span>
+        ) : data.source === "own" ? (
+          <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live</span>
         ) : (
           <span className="badge"><span className="dot" style={{ background: "var(--ink-muted)" }} />Sample data</span>
         )}
@@ -110,9 +112,13 @@ export async function ClientDashboard({
       </div>
 
       <p className="muted small">
-        {data.source === "ghl" ? "Live from OnRadar CRM" : "Sample data shown until your OnRadar CRM account is connected"} ·
+        {data.source === "ghl"
+          ? "Live from OnRadar CRM"
+          : data.source === "own"
+            ? "Live from your Leads tab: leads are counted when they arrive and move through the funnel as their status is updated"
+            : "Sample data shown until your OnRadar CRM account is connected"} ·
         updated {new Date(data.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}. Marketing spend is
-        entered by your OnRadar account manager. Submitted premium is the value of applications submitted in your CRM
+        entered by your OnRadar account manager. Submitted premium is the value of applications submitted{data.source === "own" ? "" : " in your CRM"}
         {client.averagePremium > 0 ? `, or ${money(client.averagePremium)} per application when none is recorded` : ""}.
       </p>
     </div>

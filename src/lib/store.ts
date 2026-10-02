@@ -105,6 +105,8 @@ const SIBLEY_YEARLY: YearRecord[] = [
     targetSubmitted: 55_000_000, targetPaid: 40_000_000, targetChargebacks: 4_000_000, targetApptsSet: 800, targetConnectedAppts: 520 },
 ];
 
+export const isSampleAgent = (a: { id: string; name: string }) => a.id.startsWith("ag_sample_") || /\(sample\)\s*$/i.test(a.name);
+
 /** Troy plus two fictional sample agents; rename or replace them in client settings. */
 const SIBLEY_AGENTS: Agent[] = [
   { id: "ag_troy", name: "Troy Sibley" },

@@ -13,12 +13,14 @@ export async function GeoView({ client, range, basePath }: { client: Client; ran
       <div className="row" style={{ justifyContent: "space-between" }}>
         <RangePicker basePath={basePath} active={range.key} />
         <span className="muted small">
-          {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)} · {data.source === "ghl" ? "Live from OnRadar CRM" : "Sample data"}
+          {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)} · {data.source === "ghl" ? "Live from OnRadar CRM" : data.source === "own" ? "Live from Leads tab" : "Sample data"}
         </span>
       </div>
       <GeoExplorer cells={data.byGeo} sourceOrder={client.sources.map((s) => s.name)} />
       <p className="muted small">
-        {data.source === "ghl"
+        {data.source === "own"
+          ? "Places come from each lead's city and state in the Leads tab. Leads without a city or state are grouped as Unknown."
+          : data.source === "ghl"
           ? "Places come from each lead's city and state in the CRM; appointments, applications and sales follow the lead they belong to. Leads without a city or state are grouped as Unknown."
           : "Sample data centred on Sibley's market until your OnRadar CRM account is connected."}{" "}
         Marketing spend isn&apos;t tracked by place, so each source&apos;s spend is shared across places in proportion to the leads it produced there.

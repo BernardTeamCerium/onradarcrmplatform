@@ -57,7 +57,7 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
         <RangePicker basePath={basePath} active={range.key} />
         <span className="muted small">
           {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)} ·{" "}
-          {data.source === "ghl" ? "Live from OnRadar CRM" : "Sample data"}
+          {data.source === "ghl" ? "Live from OnRadar CRM" : data.source === "own" ? "Live from Leads tab" : "Sample data"}
         </span>
       </div>
 
@@ -155,7 +155,9 @@ export async function MarketingView({ client, range, basePath }: { client: Clien
       </section>
 
       <p className="muted small">
-        {data.source === "ghl"
+        {data.source === "own"
+          ? "Leads are matched to a source using the source or UTM recorded on each lead in the Leads tab; appointments, applications and sales follow each lead's status."
+          : data.source === "ghl"
           ? "Leads are matched to a source using the lead source recorded in the CRM; appointments, applications and sales follow the lead they belong to. Anything that can't be matched is shown as Other / unknown."
           : "Sample data: each source has a realistic profile until your OnRadar CRM account is connected."}{" "}
         Spend by source comes from the marketing spend your OnRadar account manager enters for each source.

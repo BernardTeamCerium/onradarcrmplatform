@@ -172,7 +172,8 @@ export interface DashboardData {
   bySource: SourceRow[];
   /** Current-range results split by city and source (cells add up to `bySource`). */
   byGeo: GeoCell[];
-  source: "ghl" | "demo";
+  /** ghl = live CRM, own = live from OnRadar's own records (Leads tab, spend, production), demo = sample data. */
+  source: "ghl" | "own" | "demo";
   fetchedAt: string;
   warnings: string[];
 }
@@ -214,6 +215,8 @@ export interface Lead {
   /** Typeform response token or email Message-ID, used to ignore duplicate deliveries. */
   externalId?: string;
   test?: boolean;
+  /** Fictional lead seeded for demos (removed by Go live). */
+  sample?: boolean;
 }
 
 /** Outreach activity ("the engine"): texts, emails and calls. */
@@ -254,7 +257,8 @@ export interface EngineData {
   activeNow: number;
   /** Today's outbound activity. `fullDay` (sample data) is spread across the day as it runs. */
   today: { sms: number; email: number; calls: number; fullDay: boolean };
-  source: "ghl" | "demo";
+  /** ghl = live CRM, own = live from OnRadar's own records (Leads tab, spend, production), demo = sample data. */
+  source: "ghl" | "own" | "demo";
   fetchedAt: string;
   warnings: string[];
 }

@@ -85,8 +85,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     </td>
                     <td>
                       <span className="badge">
-                        <span className="dot" style={{ background: data.source === "ghl" ? "var(--good)" : "var(--ink-muted)" }} />
-                        {data.source === "ghl" ? "Live" : "Sample"}
+                        <span className="dot" style={{ background: data.source === "demo" ? "var(--ink-muted)" : "var(--good)" }} />
+                        {data.source === "demo" ? "Sample" : "Live"}
                       </span>
                     </td>
                     <td className="num">{money(data.metrics.spend)}</td>

@@ -66,7 +66,7 @@ export async function EngineView({ client, range, basePath }: { client: Client; 
       <div className="row" style={{ justifyContent: "space-between" }}>
         <RangePicker basePath={basePath} active={range.key} />
         <span className="muted small">
-          {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)} · {e.source === "ghl" ? "Live from OnRadar CRM" : "Sample data"}
+          {shortDate(range.start.toISOString().slice(0, 10))} – {shortDate(lastDay)} · {e.source === "ghl" ? "Live from OnRadar CRM" : e.source === "own" ? "Live" : "Sample data"}
         </span>
       </div>
       {e.warnings.map((w) => (
@@ -140,7 +140,9 @@ export async function EngineView({ client, range, basePath }: { client: Client; 
       </section>
 
       <p className="muted small">
-        {e.source === "ghl"
+        {e.source === "own"
+          ? "Texts, emails and calls are counted once the OnRadar CRM account is connected. Conversations and appointments set come from lead statuses in the Leads tab."
+          : e.source === "ghl"
           ? "Counts come from the CRM's message log. Messages are credited to the source of the lead they were sent to; messages to older contacts show as Other / unknown."
           : "Sample data until your OnRadar CRM account is connected. Today's counters fill in through the day."}{" "}
         This page refreshes every 30 seconds.

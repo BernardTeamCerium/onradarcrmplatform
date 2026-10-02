@@ -258,6 +258,22 @@ export function leadFromTypeform(payload: TypeformPayload, client?: Client): Omi
   };
 }
 
+/** Seeded sample leads and "send test lead" leads. Their emails use example.com, which is reserved and never real. */
+export function isSampleLead(l: Lead) {
+  return !!l.sample || !!l.test || /@example\.com$/i.test(l.email ?? "");
+}
+
+/** Removes sample and test leads; returns the removed lead ids. */
+export async function removeSampleLeads(clientId: string) {
+  return withLeads(clientId, (leads) => {
+    const removed: string[] = [];
+    for (let i = leads.length - 1; i >= 0; i--) {
+      if (isSampleLead(leads[i])) removed.push(...leads.splice(i, 1).map((l) => l.id));
+    }
+    return removed;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sample data (fictional people) for demos
 
@@ -327,6 +343,6 @@ function sampleLeads(): Lead[] {
   return statuses.map((status, i) => {
     const at = new Date(now - (i * 7 + rand() * 6 + 0.3) * 3_600_000);
     const lead = leadFromTypeform(sampleTypeformPayload(rand, at));
-    return { ...lead, id: newId("lead"), status, statusUpdatedAt: at.toISOString(), externalId: undefined };
+    return { ...lead, id: newId("lead"), status, statusUpdatedAt: at.toISOString(), externalId: undefined, sample: true };
   });
 }

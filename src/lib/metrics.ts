@@ -4,7 +4,8 @@ import { dayKey, eachDay, previousRange, type DateRange } from "./ranges";
 import { liveBySource, matchSource, sampleBySource } from "./sources";
 import { hasProduction, loadProduction, submittedInRange } from "./production";
 import { cleanPlace, liveByGeo, sampleByGeo, type GeoFact } from "./geo";
-import type { Client, DailyPoint, DashboardData, Metrics } from "./types";
+import { listLeads } from "./leads";
+import type { Client, DailyPoint, DashboardData, Lead, LeadStatus, Metrics } from "./types";
 
 const CACHE_TTL_MS = 5 * 60_000;
 const cache = new Map<string, { at: number; data: DashboardData }>();
@@ -13,13 +14,19 @@ export function usesLiveData(client: Client) {
   return !client.demoMode && !!client.ghl.apiToken && !!client.ghl.locationId;
 }
 
+/** Sample data is only ever shown while the client is in sample mode; a live client never sees made-up numbers. */
+export function showsSampleData(client: Client) {
+  return client.demoMode;
+}
+
 export function clearMetricsCache(clientId: string) {
   for (const key of cache.keys()) if (key.startsWith(`${clientId}:`)) cache.delete(key);
 }
 
 export async function getDashboardData(client: Client, range: DateRange): Promise<DashboardData> {
   const live = usesLiveData(client);
-  const key = `${client.id}:${live ? "ghl" : "demo"}:${range.start.toISOString()}:${range.end.toISOString()}`;
+  const mode = live ? "ghl" : client.demoMode ? "demo" : "own";
+  const key = `${client.id}:${mode}:${range.start.toISOString()}:${range.end.toISOString()}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
 
@@ -30,12 +37,14 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
     } catch (err) {
       // Never cache a failure; surface it on the dashboard instead of crashing the page.
       console.error(`Live data failed for ${client.id}:`, err);
+      const own = await ownData(client, range);
       return withProductionPremium(client, range, {
-        ...demoData(client, range),
-        source: "demo",
-        warnings: ["Live data is temporarily unavailable, so sample data is shown. Please check back shortly."],
+        ...own,
+        warnings: ["The CRM is temporarily unavailable, so these numbers come from OnRadar's Leads tab only. Please check back shortly."],
       });
     }
+  } else if (!client.demoMode) {
+    data = await ownData(client, range);
   } else {
     data = demoData(client, range);
   }
@@ -256,6 +265,90 @@ async function liveData(client: Client, range: DateRange): Promise<DashboardData
     source: "ghl",
     fetchedAt: new Date().toISOString(),
     warnings,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Live without a CRM: the Leads tab (Typeform, email and webhook leads and their statuses), entered spend and production.
+
+const REACHED: Record<LeadStatus, number> = {
+  New: 0,
+  "Not interested": 1,
+  "Bad contact info": 0,
+  Contacted: 1,
+  "Appointment set": 2,
+  "No show": 2,
+  "Appointment held": 3,
+  "Application submitted": 4,
+  Sold: 5,
+};
+
+async function ownData(client: Client, range: DateRange): Promise<DashboardData> {
+  const leads = (await listLeads(client.id)).filter((l) => !l.test);
+  const prev = previousRange(range);
+  const inRange = (l: Lead, r: { start: Date; end: Date }) => {
+    const t = Date.parse(l.receivedAt);
+    return t >= r.start.getTime() && t < r.end.getTime();
+  };
+  const factOf = (l: Lead): GeoFact => ({ source: matchSource(client, l.source), ...cleanPlace(l.city, l.state) });
+  const stats = (r: { start: Date; end: Date }) => {
+    const cohort = leads.filter((l) => inRange(l, r));
+    const at = (n: number) => cohort.filter((l) => REACHED[l.status] >= n);
+    const applied = at(4).map((l) => ({
+      ...factOf(l),
+      premium: client.averagePremium,
+      cycleDays: Math.max(0, (Date.parse(l.statusUpdatedAt) - Date.parse(l.receivedAt)) / 86_400_000),
+    }));
+    const days = eachDay(r);
+    return {
+      cohort,
+      facts: {
+        leads: cohort.map(factOf),
+        conversations: at(1).map((l) => ({ ...factOf(l), weight: 1 })),
+        apptsSet: at(2).map(factOf),
+        connected: at(3).map(factOf),
+        applicants: applied,
+        sales: at(5).map(factOf),
+      },
+      base: {
+        spend: days.reduce((sum, d) => sum + dailySpend(client, d), 0),
+        leads: cohort.length,
+        conversations: at(1).length,
+        apptsSet: at(2).length,
+        appointments: at(3).length,
+        applicants: applied.length,
+        sales: at(5).length,
+        premium: applied.reduce((a, x) => a + x.premium, 0),
+        cycleDaysSum: applied.reduce((a, x) => a + x.cycleDays, 0),
+      },
+    };
+  };
+  const now = stats(range);
+  const before = stats(prev);
+  const bySource = liveBySource(client, range, {
+    leads: now.facts.leads.map((f) => f.source),
+    conversations: now.facts.conversations,
+    apptsSet: now.facts.apptsSet.map((f) => f.source),
+    connected: now.facts.connected.map((f) => f.source),
+    applicants: now.facts.applicants,
+    sales: now.facts.sales.map((f) => f.source),
+  });
+  const leadsByDay = countBy(now.cohort.map((l) => l.receivedAt));
+  const apptsByDay = countBy(now.cohort.filter((l) => REACHED[l.status] >= 3).map((l) => l.receivedAt));
+  return {
+    metrics: derive(now.base),
+    previous: derive(before.base),
+    daily: eachDay(range).map((d) => ({
+      date: d,
+      leads: leadsByDay.get(d) ?? 0,
+      appointments: apptsByDay.get(d) ?? 0,
+      spend: dailySpend(client, d),
+    })),
+    bySource,
+    byGeo: liveByGeo(bySource, now.facts),
+    source: "own",
+    fetchedAt: new Date().toISOString(),
+    warnings: [],
   };
 }
 

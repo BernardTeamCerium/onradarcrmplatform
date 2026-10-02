@@ -10,7 +10,7 @@ const cache = new Map<string, { at: number; data: EngineData }>();
 
 export async function getEngineData(client: Client, range: DateRange): Promise<EngineData> {
   const live = usesLiveData(client);
-  const key = `${client.id}:${live}:${range.start.toISOString()}:${range.end.toISOString()}`;
+  const key = `${client.id}:${live ? "ghl" : client.demoMode ? "demo" : "own"}:${range.start.toISOString()}:${range.end.toISOString()}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
   let data: EngineData;
@@ -19,8 +19,10 @@ export async function getEngineData(client: Client, range: DateRange): Promise<E
       data = await liveEngine(client, range);
     } catch (err) {
       console.error(`Engine data failed for ${client.id}:`, err);
-      return { ...(await sampleEngine(client, range)), warnings: ["Live activity is temporarily unavailable, so sample data is shown."] };
+      return { ...(await ownEngine(client, range)), warnings: ["Live activity is temporarily unavailable. Please check back shortly."] };
     }
+  } else if (!client.demoMode) {
+    data = await ownEngine(client, range);
   } else {
     data = await sampleEngine(client, range);
   }
@@ -115,6 +117,27 @@ async function sampleEngine(client: Client, range: DateRange): Promise<EngineDat
     source: "demo",
     fetchedAt: new Date().toISOString(),
     warnings: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Live without the CRM: no message log, so outreach counts stay at zero; conversations come from lead statuses.
+
+async function ownEngine(client: Client, range: DateRange): Promise<EngineData> {
+  const dash = await getDashboardData(client, range);
+  return {
+    totals: { ...ZERO },
+    daily: eachDay(range).map((date) => ({ date, sms: 0, email: 0, calls: 0 })),
+    bySource: dash.bySource
+      .filter((s) => s.leads > 0 || s.conversations > 0)
+      .map((s) => ({ source: s.source, conversations: s.conversations, apptsSet: s.apptsSet, smsOut: 0, emailOut: 0, callsOut: 0, replies: 0 })),
+    conversations: dash.metrics.conversations,
+    apptsSet: dash.metrics.apptsSet,
+    activeNow: 0,
+    today: { sms: 0, email: 0, calls: 0, fullDay: false },
+    source: "own",
+    fetchedAt: new Date().toISOString(),
+    warnings: client.ghl.apiToken ? [] : ["Connect the OnRadar CRM account in client settings to count texts, emails and calls."],
   };
 }
 
