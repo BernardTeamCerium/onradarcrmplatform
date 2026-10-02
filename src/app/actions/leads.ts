@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { leadFromEmail } from "@/lib/inbound";
+import { formIdFrom, importTypeform } from "@/lib/typeform";
 import { addLead, deleteLead, leadFromTypeform, sampleTypeformPayload, setLeadStatus } from "@/lib/leads";
 import { withBooked } from "@/lib/appointments";
 import { getClient, newId, randomSecret, updateDb } from "@/lib/store";
@@ -25,7 +26,7 @@ export async function updateLeadStatus(clientId: string, leadId: string, status:
 export async function sendTestLead(clientId: string): Promise<Lead> {
   await requireAdmin();
   if (!(await getClient(clientId))) throw new Error("Unknown client");
-  return addLead(clientId, { ...leadFromTypeform(sampleTypeformPayload()), test: true });
+  return addLead(clientId, { ...leadFromTypeform(sampleTypeformPayload(), (await getClient(clientId))!), test: true });
 }
 
 export async function removeLead(clientId: string, leadId: string) {
@@ -123,4 +124,34 @@ export async function setBookedStatus(form: FormData) {
   revalidatePath("/", "layout");
   const back = String(form.get("returnTo") ?? "");
   if (back.startsWith("/") && !back.startsWith("//")) redirect(back);
+}
+
+/** Saves Typeform API access and imports every past response into the Leads tab. */
+export async function importTypeformResponses(form: FormData) {
+  await requireAdmin();
+  const id = String(form.get("clientId") ?? "");
+  const client = await getClient(id);
+  const back = (m: string) => `/admin/clients/${id}/settings?msg=${encodeURIComponent(m)}#typeform`;
+  if (!client) redirect(back("Unknown client."));
+  const tokenInput = String(form.get("token") ?? "").trim();
+  const token = tokenInput || client.typeformApi?.token || "";
+  const formIds = String(form.get("formIds") ?? "")
+    .split(/[\s,]+/)
+    .map(formIdFrom)
+    .filter(Boolean);
+  const region = form.get("region") === "eu" ? "eu" : "us";
+  if (!token || formIds.length === 0) redirect(back("Enter a Typeform access token and at least one form ID."));
+  let msg: string;
+  try {
+    const r = await importTypeform(client, { token, formIds, region });
+    msg = `Typeform import: ${r.read} responses read, ${r.added} new leads added, ${r.skipped} already here or empty.`;
+  } catch (err) {
+    msg = `Typeform import failed: ${(err as Error).message}`;
+  }
+  await updateDb((db) => {
+    const c = db.clients.find((x) => x.id === id);
+    if (c) c.typeformApi = { token, formIds, region, lastImportAt: new Date().toISOString(), lastResult: msg };
+  });
+  revalidatePath("/", "layout");
+  redirect(back(msg));
 }

@@ -1,9 +1,10 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { newId, readJson, writeJson } from "./store";
-import { LEAD_STATUSES, type Lead, type LeadStatus, type QuizAnswer } from "./types";
+import { matchSource, OTHER } from "./sources";
+import { LEAD_STATUSES, type Client, type Lead, type LeadStatus, type QuizAnswer } from "./types";
 
-const MAX_LEADS = 2000;
+const MAX_LEADS = 20000;
 const leadsKey = (clientId: string) => `leads/${clientId}.json`;
 
 // Serialise read-modify-write per client so simultaneous webhooks don't drop leads.
@@ -46,6 +47,23 @@ export async function addLead(clientId: string, lead: Omit<Lead, "id" | "status"
   });
 }
 
+/** Adds many leads in one write (used for imports); repeats of an existing externalId are skipped. */
+export async function addLeads(clientId: string, incoming: Omit<Lead, "id" | "status" | "statusUpdatedAt">[]) {
+  return withLeads(clientId, (leads) => {
+    const seen = new Set(leads.map((l) => l.externalId).filter(Boolean));
+    let added = 0;
+    const now = new Date().toISOString();
+    for (const lead of incoming) {
+      if (lead.externalId && seen.has(lead.externalId)) continue;
+      if (lead.externalId) seen.add(lead.externalId);
+      leads.push({ id: newId("lead"), status: "New", statusUpdatedAt: now, ...lead });
+      added++;
+    }
+    leads.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+    return { added, skipped: incoming.length - added };
+  });
+}
+
 export async function setLeadStatus(clientId: string, leadId: string, status: LeadStatus) {
   if (!LEAD_STATUSES.includes(status)) throw new Error("Unknown status");
   return withLeads(clientId, (leads) => {
@@ -76,11 +94,13 @@ export function verifyTypeformSignature(rawBody: string, header: string | null, 
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-interface TypeformField {
+export interface TypeformField {
   id: string;
   title?: string;
   type?: string;
   ref?: string;
+  /** Question groups, matrices and contact/address blocks nest their questions here. */
+  properties?: { fields?: TypeformField[] };
 }
 
 interface TypeformAnswer {
@@ -96,20 +116,28 @@ interface TypeformAnswer {
   file_url?: string;
   choice?: { label?: string; other?: string };
   choices?: { labels?: string[]; other?: string };
-  payment?: { amount?: string; name?: string };
+  payment?: { amount?: string; name?: string; success?: boolean };
+  multi_format?: { text?: string; audio_url?: string; video_url?: string };
+}
+
+export interface TypeformResponseBody {
+  form_id?: string;
+  token?: string;
+  response_id?: string;
+  landed_at?: string;
+  submitted_at?: string;
+  definition?: { title?: string; fields?: TypeformField[] };
+  answers?: TypeformAnswer[];
+  hidden?: Record<string, string>;
+  calculated?: { score?: number };
+  variables?: { key: string; type?: string; number?: number; text?: string }[];
+  ending?: { id?: string; ref?: string };
 }
 
 export interface TypeformPayload {
   event_id?: string;
   event_type?: string;
-  form_response?: {
-    form_id?: string;
-    token?: string;
-    submitted_at?: string;
-    definition?: { title?: string; fields?: TypeformField[] };
-    answers?: TypeformAnswer[];
-    hidden?: Record<string, string>;
-  };
+  form_response?: TypeformResponseBody;
 }
 
 function answerText(a: TypeformAnswer): string {
@@ -123,47 +151,110 @@ function answerText(a: TypeformAnswer): string {
     case "number":
       return a.number === undefined ? "" : String(a.number);
     case "payment":
-      return a.payment?.amount ?? "";
+      return a.payment ? `${a.payment.amount ?? ""}${a.payment.success === false ? " (failed)" : ""}`.trim() : "";
+    case "multi_format":
+      return a.multi_format?.text ?? a.multi_format?.video_url ?? a.multi_format?.audio_url ?? "";
     default:
       return String(a.text ?? a.email ?? a.phone_number ?? a.date ?? a.url ?? a.file_url ?? "");
   }
 }
 
-/** Turns a Typeform webhook payload into a lead: contact details plus every question and answer. */
-export function leadFromTypeform(payload: TypeformPayload): Omit<Lead, "id" | "status" | "statusUpdatedAt"> {
+/** Every question in the form, including ones nested inside groups, matrices and contact/address blocks. */
+function flattenFields(fields: TypeformField[] = [], out = new Map<string, TypeformField>()) {
+  for (const f of fields) {
+    out.set(f.id, f);
+    if (f.properties?.fields) flattenFields(f.properties.fields, out);
+  }
+  return out;
+}
+
+const HIDDEN_LABELS: Record<string, string> = {
+  utm_source: "UTM source",
+  utm_medium: "UTM medium",
+  utm_campaign: "UTM campaign",
+  utm_content: "UTM content",
+  utm_term: "UTM term",
+  fbclid: "Facebook click ID",
+  gclid: "Google click ID",
+};
+
+/**
+ * Turns a Typeform submission (webhook or Responses API) into a lead: contact details, every question and
+ * answer (including grouped ones), hidden fields such as UTM tags, score and variables, and the marketing
+ * source when a hidden field names one.
+ */
+export function leadFromTypeform(payload: TypeformPayload, client?: Client): Omit<Lead, "id" | "status" | "statusUpdatedAt"> {
   const fr = payload.form_response;
   if (!fr?.answers) throw new Error("Not a Typeform form response");
-  const titles = new Map((fr.definition?.fields ?? []).map((f) => [f.id, f.title ?? f.ref ?? "Question"]));
+  const fields = flattenFields(fr.definition?.fields);
+  const hidden = fr.hidden ?? {};
+  const byRef = new Map<string, string>();
+  for (const a of fr.answers) if (a.field.ref) byRef.set(a.field.ref, answerText(a).trim());
+  const vars = new Map((fr.variables ?? []).map((v) => [v.key, v.number !== undefined ? String(v.number) : v.text ?? ""]));
+  // Fill "recall" placeholders like {{field:ref}}, {{hidden:name}} and {{var:score}} in question titles.
+  const recall = (t: string) =>
+    t
+      .replace(/\{\{field:([^}]+)\}\}/g, (_, r) => byRef.get(r) ?? "")
+      .replace(/\{\{hidden:([^}]+)\}\}/g, (_, k) => hidden[k] ?? "")
+      .replace(/\{\{var:([^}]+)\}\}/g, (_, k) => vars.get(k) ?? "")
+      .replace(/\*/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/\s+([,?.!])/g, "$1")
+      .trim();
+
   const answers: QuizAnswer[] = [];
   let email: string | undefined;
   let phone: string | undefined;
   let first = "";
   let last = "";
   let full = "";
+  let city: string | undefined;
+  let state: string | undefined;
 
   for (const a of fr.answers) {
-    const question = (titles.get(a.field.id) ?? a.field.title ?? a.field.ref ?? "Question").replace(/\*/g, "").trim();
+    const def = fields.get(a.field.id);
+    const question = recall(def?.title ?? a.field.title ?? a.field.ref ?? "Question") || "Question";
     const answer = answerText(a).trim();
     answers.push({ question, answer });
     const q = question.toLowerCase();
     if (a.type === "email" && !email) email = a.email;
     else if (a.type === "phone_number" && !phone) phone = a.phone_number;
-    else if (a.type === "text" && /name/.test(q)) {
+    else if (a.type === "text" && /name/.test(q) && !/company|business|spouse|agent/.test(q)) {
       if (/first/.test(q)) first = answer;
       else if (/last|sur/.test(q)) last = answer;
       else if (!full) full = answer;
-    }
+    } else if (a.type === "text" && /\bcity\b|\btown\b/.test(q) && !city) city = answer;
+    else if ((a.type === "text" || a.type === "choice") && /\bstate\b|region|province/.test(q) && !state) state = answer;
   }
-  const hidden = fr.hidden ?? {};
+
+  // Hidden fields (UTM tags, ad IDs, anything passed in the link) and quiz scoring are kept with the answers.
+  for (const [k, v] of Object.entries(hidden)) {
+    if (v) answers.push({ question: HIDDEN_LABELS[k.toLowerCase()] ?? `Hidden: ${k.replace(/_/g, " ")}`, answer: String(v) });
+  }
+  if (fr.calculated?.score !== undefined) answers.push({ question: "Quiz score", answer: String(fr.calculated.score) });
+  for (const v of fr.variables ?? []) {
+    if (v.key !== "score") answers.push({ question: `Variable: ${v.key}`, answer: v.number !== undefined ? String(v.number) : v.text ?? "" });
+  }
+  if (fr.landed_at && fr.submitted_at) {
+    const secs = Math.round((Date.parse(fr.submitted_at) - Date.parse(fr.landed_at)) / 1000);
+    if (secs > 0 && secs < 86_400) answers.push({ question: "Time to complete", answer: secs < 90 ? `${secs} sec` : `${Math.round(secs / 60)} min` });
+  }
+
+  // Marketing source: a hidden source / utm_source wins (e.g. ?utm_source=facebook on the quiz link).
+  const hiddenSource = hidden.source ?? hidden.utm_source ?? hidden.lead_source ?? "";
+  const matched = client && hiddenSource ? matchSource(client, hiddenSource) : OTHER;
   const name = full || [first, last].filter(Boolean).join(" ") || hidden.name || email || phone || "Unknown lead";
   return {
     name,
     email: email ?? hidden.email,
     phone: phone ?? hidden.phone,
-    source: fr.definition?.title ?? "Typeform",
+    city: city || hidden.city || undefined,
+    state: (state || hidden.state || undefined)?.trim(),
+    source: matched !== OTHER ? matched : fr.definition?.title ?? "Typeform",
     receivedAt: fr.submitted_at ? new Date(fr.submitted_at).toISOString() : new Date().toISOString(),
     answers,
-    externalId: fr.token,
+    channel: "typeform",
+    externalId: fr.token ?? fr.response_id,
   };
 }
 

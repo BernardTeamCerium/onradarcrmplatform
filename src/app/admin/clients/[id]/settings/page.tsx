@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ClientHeader } from "@/components/ClientHeader";
 import { ClientTabs } from "@/components/ClientTabs";
-import { importEmailLead, regenerateInboundKey, regenerateTypeformSecret } from "@/app/actions/leads";
+import { importEmailLead, importTypeformResponses, regenerateInboundKey, regenerateTypeformSecret } from "@/app/actions/leads";
 import { gmailScript } from "@/lib/inbound";
 import { headers } from "next/headers";
 import {
@@ -288,12 +288,15 @@ export default async function ClientSettings({
         </section>
 
         {/* Typeform */}
-        <section className="card">
+        <section className="card" id="typeform">
           <div className="card-head">
             <div>
               <h2>Typeform quiz</h2>
               <p className="muted small">
-                Every quiz submission shows up on the client&apos;s Leads page within seconds, with all of their answers.
+                Every quiz submission shows up on the client&apos;s Leads page within seconds with everything Typeform sends: every answer
+                (including grouped and address questions), hidden fields such as UTM tags, the quiz score and variables, and time to complete.
+                Add <code>?utm_source=facebook</code> (or tv, radio, tiktok, youtube…) to each ad&apos;s quiz link and the lead is credited to that
+                marketing source.
               </p>
             </div>
             <Link className="btn sm" href={`/admin/clients/${id}/leads`}>Open leads</Link>
@@ -317,6 +320,43 @@ export default async function ClientSettings({
           <form action={regenerateTypeformSecret} style={{ marginTop: 12 }}>
             <input type="hidden" name="clientId" value={id} />
             <button className="btn sm" type="submit">Create a new secret</button>
+          </form>
+
+          <h3 style={{ margin: "20px 0 6px" }}>Import past responses</h3>
+          <p className="small secondary" style={{ margin: "0 0 10px" }}>
+            Brings in every completed response already in Typeform, including ones from before the webhook was set up. Responses already on the
+            Leads tab are skipped, so you can run it again any time. Create a token in Typeform under <b>Account → Your settings → Personal
+            tokens</b> with <b>Forms: read</b> and <b>Responses: read</b>.
+          </p>
+          <form action={importTypeformResponses} className="stack" style={{ gap: 10 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <div className="form-grid">
+              <label className="field">
+                Personal access token
+                <input name="token" type="password" autoComplete="off" placeholder={client.typeformApi?.token ? "Saved (leave blank to keep)" : "tfp_…"} />
+              </label>
+              <label className="field">
+                Form ID or quiz link
+                <input name="formIds" defaultValue={client.typeformApi?.formIds.join(", ") ?? ""} placeholder="AbC123xy or https://….typeform.com/to/AbC123xy" required />
+                <span className="hint">Separate several forms with commas</span>
+              </label>
+              <label className="field">
+                Typeform data center
+                <select name="region" defaultValue={client.typeformApi?.region ?? "us"}>
+                  <option value="us">Standard (US)</option>
+                  <option value="eu">EU</option>
+                </select>
+              </label>
+            </div>
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button className="btn primary" type="submit">{client.typeformApi ? "Import again" : "Import all responses"}</button>
+              {client.typeformApi?.lastImportAt && (
+                <span className="muted small">
+                  Last run {new Date(client.typeformApi.lastImportAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}:{" "}
+                  {client.typeformApi.lastResult}
+                </span>
+              )}
+            </div>
           </form>
         </section>
 

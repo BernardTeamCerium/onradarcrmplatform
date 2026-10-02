@@ -109,6 +109,8 @@ export interface Client {
   primaryAgent?: string;
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
+  /** Typeform API access for importing past responses. */
+  typeformApi?: { token: string; formIds: string[]; region: "us" | "eu"; lastImportAt?: string; lastResult?: string };
   /** Key that lets the Gmail script and other tools post leads for this client. */
   inboundKey: string;
   /** Agents whose calendars show on the Calendar tab. */

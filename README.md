@@ -84,6 +84,10 @@ To connect a Typeform quiz (the site must be live, e.g. on Netlify):
 2. In Typeform: open the quiz → **Connect → Webhooks → Add a webhook**, paste the URL, then **Edit** the webhook and paste the secret. Turn it on.
 3. Click **View deliveries → Send test request** in Typeform. The lead appears on the Leads page.
 
+Everything Typeform sends is kept: every answer, including questions inside groups and contact or address blocks, with personalized titles filled in. Hidden fields (UTM tags, ad IDs), the quiz score, variables and time to complete are kept too. City and state are read from address answers. A `?utm_source=facebook` (or tv, radio, tiktok, youtube…) on the quiz link credits the lead to that marketing source.
+
+**Past responses:** under Settings → Typeform quiz → **Import past responses**, enter a Typeform personal access token (Forms: read, Responses: read) and the form ID or quiz link. Every completed response is imported through the same reader; responses already on the Leads tab are skipped, so it can be re-run any time.
+
 Submissions without a valid Typeform signature are rejected, and repeat deliveries of the same response are ignored. Name, email and phone are taken from the quiz's name, email and phone questions automatically.
 
 Admins also have a **Send test lead** button on the Leads page that runs a realistic sample submission through the same parser. Use it to show a live lead arriving during a demo, and delete test leads afterwards. Sibley Financial Group starts with 14 fictional sample leads.

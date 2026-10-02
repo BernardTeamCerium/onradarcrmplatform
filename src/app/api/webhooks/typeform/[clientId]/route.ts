@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   if (!payload.form_response) return Response.json({ ok: true, ignored: true });
 
   try {
-    const lead = await addLead(clientId, leadFromTypeform(payload));
+    const lead = await addLead(clientId, leadFromTypeform(payload, client));
     return Response.json({ ok: true, leadId: lead.id });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 422 });
