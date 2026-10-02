@@ -1,8 +1,81 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { removeLead, sendTestLead, updateLeadStatus } from "@/app/actions/leads";
-import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/types";
+import { bookAppointment, removeLead, sendTestLead, updateLeadStatus } from "@/app/actions/leads";
+import { LEAD_STATUSES, type Agent, type BookedAppt, type Lead, type LeadStatus } from "@/lib/types";
+
+const APPT_TYPES = ["New money", "Policy review", "Annuity review", "401(k) rollover", "Retirement income plan", "Beneficiary & estate review"];
+
+function when(b: BookedAppt) {
+  const h = Number(b.time.slice(0, 2));
+  return `${new Date(`${b.date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })} at ${((h + 11) % 12) + 1}:${b.time.slice(3)} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** Books a calendar appointment for the selected lead. */
+function BookForm({ clientId, lead, agents, onBooked }: { clientId: string; lead: Lead; agents: Agent[]; onBooked: (b: BookedAppt) => void }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  if (agents.length === 0) return <p className="muted small">Add agents in settings to book appointments.</p>;
+  if (!open) return <button className="btn sm" onClick={() => setOpen(true)}>Book appointment</button>;
+  return (
+    <form
+      className="stack book-form"
+      style={{ gap: 10 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        setError(null);
+        start(async () => {
+          try {
+            const b = await bookAppointment(clientId, lead.id, {
+              date: String(f.get("date")),
+              time: String(f.get("time")),
+              agentId: String(f.get("agentId")),
+              minutes: Number(f.get("minutes")),
+              apptType: String(f.get("apptType")),
+              notes: String(f.get("notes") ?? ""),
+            });
+            onBooked(b);
+            setOpen(false);
+          } catch (err) {
+            setError((err as Error).message);
+          }
+        });
+      }}
+    >
+      <h3>Book an appointment with {lead.name}</h3>
+      <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <label className="field">Date<input name="date" type="date" defaultValue={tomorrow} required /></label>
+        <label className="field">Time<input name="time" type="time" defaultValue="10:00" step={900} required /></label>
+        <label className="field">
+          Agent
+          <select name="agentId" defaultValue={agents[0].id}>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
+        </label>
+        <label className="field">
+          Meeting type
+          <select name="apptType" defaultValue="New money">{APPT_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
+        </label>
+        <label className="field">
+          Length
+          <select name="minutes" defaultValue="60">
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1 hour</option>
+            <option value="90">1.5 hours</option>
+          </select>
+        </label>
+      </div>
+      <label className="field">Notes<input name="notes" placeholder="Optional" /></label>
+      {error && <p className="error">{error}</p>}
+      <div className="row">
+        <button className="btn primary" type="submit" disabled={pending}>{pending ? "Booking…" : "Book appointment"}</button>
+        <button className="btn" type="button" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
 
 const POLL_MS = 4000;
 
@@ -48,11 +121,18 @@ export function LeadsBoard({
   clientId,
   initialLeads,
   isAdmin,
+  agents = [],
+  bookings: initialBookings = [],
+  calendarBase,
 }: {
   clientId: string;
   initialLeads: Lead[];
   isAdmin: boolean;
+  agents?: Agent[];
+  bookings?: BookedAppt[];
+  calendarBase?: string;
 }) {
+  const [bookings, setBookings] = useState(initialBookings);
   const [leads, setLeads] = useState(initialLeads);
   const [selectedId, setSelectedId] = useState<string | null>(initialLeads[0]?.id ?? null);
   const [filter, setFilter] = useState<LeadStatus | "All">("All");
@@ -265,6 +345,39 @@ export function LeadsBoard({
                   <div className="muted small">Status updated</div>
                   <span>{ago(selected.statusUpdatedAt, now)}</span>
                 </div>
+              </div>
+              <div className="stack" style={{ gap: 8 }}>
+                <h3>Appointments</h3>
+                {bookings.filter((b) => b.leadId === selected.id).length > 0 ? (
+                  <ul className="plan" style={{ margin: 0 }}>
+                    {bookings
+                      .filter((b) => b.leadId === selected.id)
+                      .map((b) => (
+                        <li key={b.id}>
+                          {when(b)} with {agents.find((a) => a.id === b.agentId)?.name ?? "agent"}
+                          {b.apptType ? ` · ${b.apptType}` : ""} · {b.status}
+                          {calendarBase && (
+                            <>
+                              {" "}
+                              <a href={`${calendarBase}?day=${b.date}`}>View on calendar</a>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="muted small" style={{ margin: 0 }}>None booked yet.</p>
+                )}
+                <BookForm
+                  key={selected.id}
+                  clientId={clientId}
+                  lead={selected}
+                  agents={agents}
+                  onBooked={(b) => {
+                    setBookings((bs) => [...bs, b]);
+                    setLeads((ls) => ls.map((l) => (l.id === b.leadId ? { ...l, status: "Appointment set", statusUpdatedAt: new Date().toISOString() } : l)));
+                  }}
+                />
               </div>
               <div>
                 <h3 style={{ marginBottom: 8 }}>{selected.channel === "email" || selected.channel === "manual" ? "Details from the email" : "Quiz responses"}</h3>

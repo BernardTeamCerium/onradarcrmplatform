@@ -5,6 +5,7 @@ import { ClientHeader } from "@/components/ClientHeader";
 import { ClientTabs } from "@/components/ClientTabs";
 import { LeadsBoard } from "@/components/LeadsBoard";
 import { requireAdmin } from "@/lib/auth";
+import { listBooked } from "@/lib/appointments";
 import { listLeads } from "@/lib/leads";
 import { getClient } from "@/lib/store";
 
@@ -24,7 +25,7 @@ export default async function AdminLeadsPage({ params }: { params: Promise<{ id:
       <div className="stack">
         <ClientHeader client={client} subtitle="Every quiz lead, with their answers and where they stand" />
         <ClientTabs base={`/admin/clients/${id}`} active="leads" admin />
-        <LeadsBoard clientId={id} initialLeads={leads} isAdmin />
+        <LeadsBoard clientId={id} initialLeads={leads} isAdmin agents={client.agents} bookings={await listBooked(id)} calendarBase={`/admin/clients/${id}/calendar`} />
       </div>
     </AppShell>
   );

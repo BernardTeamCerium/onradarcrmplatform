@@ -14,7 +14,7 @@ export default async function AdminBioPage({ params }: { params: Promise<{ id: s
   const appt = decodeURIComponent(apptId);
   return (
     <AppShell user={user} active="overview">
-      <ProspectBio client={client} apptId={appt} backHref={`/admin/clients/${id}/calendar?day=${appt.split("~")[0]}`} />
+      <ProspectBio client={client} apptId={appt} calendarBase={`/admin/clients/${id}/calendar`} />
     </AppShell>
   );
 }

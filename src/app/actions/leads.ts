@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { leadFromEmail } from "@/lib/inbound";
 import { addLead, deleteLead, leadFromTypeform, sampleTypeformPayload, setLeadStatus } from "@/lib/leads";
-import { getClient, randomSecret, updateDb } from "@/lib/store";
-import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/lib/types";
+import { withBooked } from "@/lib/appointments";
+import { getClient, newId, randomSecret, updateDb } from "@/lib/store";
+import { LEAD_STATUSES, type ApptStatus, type BookedAppt, type Lead, type LeadStatus } from "@/lib/types";
 
 async function assertAccess(clientId: string) {
   const user = await requireUser();
@@ -69,4 +70,57 @@ export async function regenerateInboundKey(form: FormData) {
   });
   revalidatePath(`/admin/clients/${id}/settings`);
   redirect(`/admin/clients/${id}/settings?msg=${encodeURIComponent("New key created. Update the Gmail script and any tools that send leads.")}#email-leads`);
+}
+
+const APPT_TYPES = ["New money", "Policy review", "Annuity review", "401(k) rollover", "Retirement income plan", "Beneficiary & estate review"] as const;
+
+/** Books an appointment for a lead from the Leads tab; it shows on the agent's Calendar. */
+export async function bookAppointment(
+  clientId: string,
+  leadId: string,
+  input: { date: string; time: string; agentId: string; minutes: number; apptType?: string; notes?: string },
+): Promise<BookedAppt> {
+  const user = await assertAccess(clientId);
+  const client = await getClient(clientId);
+  if (!client) throw new Error("Unknown client");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time)) throw new Error("Pick a date and time");
+  if (!client.agents.some((a) => a.id === input.agentId)) throw new Error("Pick an agent");
+  const appt: BookedAppt = {
+    id: newId("ap"),
+    leadId,
+    agentId: input.agentId,
+    date: input.date,
+    time: input.time,
+    minutes: Math.min(240, Math.max(15, Math.round(input.minutes) || 60)),
+    apptType: APPT_TYPES.find((t) => t === input.apptType),
+    status: "Scheduled",
+    notes: input.notes?.slice(0, 500) || undefined,
+    createdAt: new Date().toISOString(),
+    createdBy: user.name,
+  };
+  await withBooked(clientId, (list) => void list.push(appt));
+  await setLeadStatus(clientId, leadId, "Appointment set");
+  revalidatePath("/", "layout");
+  return appt;
+}
+
+/** Marks a booked appointment as showed / no-show / cancelled and moves the lead to match. */
+export async function setBookedStatus(form: FormData) {
+  const clientId = String(form.get("clientId") ?? "");
+  await assertAccess(clientId);
+  const id = String(form.get("id") ?? "").replace(/^bk~/, "");
+  const status = String(form.get("status") ?? "") as ApptStatus;
+  if (!["Scheduled", "Confirmed", "Showed", "No-show", "Cancelled"].includes(status)) throw new Error("Unknown status");
+  const appt = await withBooked(clientId, (list) => {
+    const a = list.find((x) => x.id === id);
+    if (a) a.status = status;
+    return a;
+  });
+  if (appt) {
+    const leadStatus = status === "Showed" ? "Appointment held" : status === "No-show" ? "No show" : status === "Cancelled" ? "Contacted" : "Appointment set";
+    await setLeadStatus(clientId, appt.leadId, leadStatus);
+  }
+  revalidatePath("/", "layout");
+  const back = String(form.get("returnTo") ?? "");
+  if (back.startsWith("/") && !back.startsWith("//")) redirect(back);
 }

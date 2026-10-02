@@ -4,6 +4,7 @@ import { ClientHeader } from "@/components/ClientHeader";
 import { ClientTabs } from "@/components/ClientTabs";
 import { LeadsBoard } from "@/components/LeadsBoard";
 import { requireUser } from "@/lib/auth";
+import { listBooked } from "@/lib/appointments";
 import { listLeads } from "@/lib/leads";
 import { getClient } from "@/lib/store";
 
@@ -20,7 +21,7 @@ export default async function ClientLeadsPage() {
       <div className="stack">
         <ClientHeader client={client} subtitle="Every quiz lead, with their answers and where they stand" />
         <ClientTabs base="/dashboard" active="leads" />
-        <LeadsBoard clientId={client.id} initialLeads={leads} isAdmin={false} />
+        <LeadsBoard clientId={client.id} initialLeads={leads} isAdmin={false} agents={client.agents} bookings={await listBooked(client.id)} calendarBase={"/dashboard/calendar"} />
       </div>
     </AppShell>
   );

@@ -6,8 +6,13 @@ export function ClientTabs({ base, active, admin }: { base: string; active: "das
     { key: "dashboard", label: "Dashboard", href: base },
     { key: "engine", label: "Engine", href: `${base}/engine` },
     { key: "calendar", label: "Calendar", href: `${base}/calendar` },
-    { key: "marketing", label: "Marketing", href: `${base}/marketing` },
-    { key: "geo", label: "Geo", href: `${base}/geo` },
+    // Marketing and Geo are for OnRadar admins only.
+    ...(admin
+      ? [
+          { key: "marketing", label: "Marketing", href: `${base}/marketing` },
+          { key: "geo", label: "Geo", href: `${base}/geo` },
+        ]
+      : []),
     { key: "leads", label: "Leads", href: `${base}/leads` },
     { key: "production", label: "Production", href: `${base}/production` },
     { key: "trends", label: "Trends", href: `${base}/trends` },

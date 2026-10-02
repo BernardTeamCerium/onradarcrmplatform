@@ -168,8 +168,8 @@ export default async function ClientSettings({
           </div>
           <form action={saveAgents} className="stack" style={{ gap: 8 }}>
             <input type="hidden" name="clientId" value={id} />
-            {[...client.agents, { id: "", name: "", crmUserId: "" }, { id: "", name: "", crmUserId: "" }].map((ag, i) => (
-              <div className="form-grid" key={ag.id || `new${i}`} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
+            {[...client.agents, { id: "", name: "", crmUserId: "", googleIcsUrl: "" }, { id: "", name: "", crmUserId: "", googleIcsUrl: "" }].map((ag, i) => (
+              <div className="form-grid" key={ag.id || `new${i}`} style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr)" }}>
                 <input type="hidden" name="agentId" value={ag.id} />
                 <label className="field">
                   {i === 0 ? "Agent name" : <span className="sr-only">Agent name</span>}
@@ -179,8 +179,21 @@ export default async function ClientSettings({
                   {i === 0 ? "CRM user ID (optional)" : <span className="sr-only">CRM user ID</span>}
                   <input name="crmUserId" defaultValue={ag.crmUserId ?? ""} />
                 </label>
+                <label className="field">
+                  {i === 0 ? "Google Calendar secret iCal address (optional)" : <span className="sr-only">Google Calendar address</span>}
+                  <input name="googleIcsUrl" type="url" defaultValue={ag.googleIcsUrl ?? ""} placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" />
+                </label>
               </div>
             ))}
+            <p className="small secondary" style={{ margin: 0 }}>
+              <b>Google Calendar:</b> the agent opens Google Calendar on a computer → Settings (gear) → their calendar under &ldquo;Settings for my
+              calendars&rdquo; → <b>Integrate calendar</b> → copy <b>Secret address in iCal format</b> and paste it here. Events show on the Calendar tab
+              within about 5 minutes (read-only). Treat the address like a password.
+            </p>
+            <label className="checkbox">
+              <input type="checkbox" name="calendarSamples" defaultChecked={client.calendarSamples !== false} /> Show sample appointments (turn off once
+              real calendars are connected)
+            </label>
             <label className="field" style={{ maxWidth: 320 }}>
               Calendar time zone
               <input name="timeZone" defaultValue={client.timeZone} />

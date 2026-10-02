@@ -69,7 +69,7 @@ export async function CalendarView({
             <span className="dot live-dot" style={{ background: "var(--green)" }} />
             Today · {dayName(today, "long")}, {dayLabel(today)}
           </span>
-          <span className="small" style={{ opacity: 0.75 }}>{agentId ? agentName(agentId) : "All agents"} · {week.source === "ghl" ? "Live from OnRadar CRM" : "Sample data"}</span>
+          <span className="small" style={{ opacity: 0.75 }}>{agentId ? agentName(agentId) : "All agents"} · {week.label}</span>
         </div>
         <div className="engine-live-grid">
           <div>
@@ -196,9 +196,8 @@ export async function CalendarView({
         )}
       </section>
       <p className="muted small">
-        {week.source === "ghl"
-          ? "Appointments come from the CRM calendars, grouped by the assigned user. Age, assets and the quiz bio come from the prospect's Typeform quiz when their email or phone matches a quiz lead."
-          : "Sample appointments until your OnRadar CRM account is connected. Agents can be renamed in client settings."}{" "}
+        Showing: {week.label}. Appointments booked from the Leads tab and agents&apos; Google Calendars appear here; Google events are
+        matched to a lead (for the quiz bio) by the lead&apos;s email, phone or full name in the event.{" "}
         Times are {client.timeZone.replace("_", " ")}.
       </p>
     </div>

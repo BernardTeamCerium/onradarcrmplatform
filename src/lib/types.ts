@@ -115,6 +115,8 @@ export interface Client {
   agents: Agent[];
   /** IANA time zone for the client's calendar, e.g. America/Chicago. */
   timeZone: string;
+  /** Show generated sample appointments on the Calendar (turn off once real calendars are connected). */
+  calendarSamples?: boolean;
   /** Marketing sources shown on the Marketing tab, in display order. */
   sources: MarketingSource[];
   /** Yearly production, appointment totals and targets shown on the Trends tab. */
@@ -260,6 +262,23 @@ export interface Agent {
   name: string;
   /** The agent's user ID in the CRM, used to match live calendar appointments. */
   crmUserId?: string;
+  /** Google Calendar "secret address in iCal format"; the agent's events show on the Calendar tab. */
+  googleIcsUrl?: string;
+}
+
+/** An appointment booked from the Leads tab. */
+export interface BookedAppt {
+  id: string;
+  leadId: string;
+  agentId: string;
+  date: string;
+  time: string;
+  minutes: number;
+  apptType?: ApptType;
+  status: ApptStatus;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
 }
 
 export type ApptStatus = "Scheduled" | "Confirmed" | "Showed" | "No-show" | "Cancelled";
@@ -287,6 +306,10 @@ export interface CalendarAppt {
   quiz?: { title: string; answers: QuizAnswer[] };
   /** What the meeting is for (new money, policy review, ...). */
   apptType?: ApptType;
+  /** Where the appointment came from. */
+  origin?: "sample" | "crm" | "booked" | "google";
+  /** Lead this appointment belongs to, if known. */
+  leadId?: string;
   /** Fuller background for the agent's prep brief (Word download). */
   profile?: ProspectProfile;
 }

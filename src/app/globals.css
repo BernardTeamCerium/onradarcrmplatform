@@ -349,3 +349,4 @@ table.compact tr.geo-sub td:first-child { background: var(--surface-2); }
 .bio-facts dd { margin: 2px 0 0; font-weight: 600; }
 a.chip { text-decoration: none; }
 .bio-callout { background: var(--surface-2); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 14px; }
+.book-form { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }

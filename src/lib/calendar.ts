@@ -5,7 +5,10 @@ import { leadFromTypeform, listLeads, sampleTypeformPayload } from "./leads";
 import { demoRows, hash, rng, usesLiveData } from "./metrics";
 import { sampleProfile } from "./profiles";
 import { matchSource, OTHER, profile } from "./sources";
-import type { Agent, ApptStatus, ApptType, CalendarAppt, Client, Lead } from "./types";
+import { createHash } from "crypto";
+import { listBooked } from "./appointments";
+import { fetchIcs } from "./ics";
+import type { Agent, ApptStatus, ApptType, BookedAppt, CalendarAppt, Client, Lead } from "./types";
 
 const DAY = 86_400_000;
 
@@ -240,44 +243,172 @@ export interface CalendarWeek {
   today: { date: string; minutes: number };
   days: { date: string; appts: CalendarAppt[] }[];
   source: "ghl" | "demo";
+  /** What's on screen, e.g. "Sample data" or "Booked appointments + Google Calendar". */
+  label: string;
   warnings: string[];
+}
+
+const hhmm = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+/** Fills an appointment's prospect details (quiz, contact, assets) from a Leads-tab lead. */
+function fromLead(client: Client, lead: Lead | undefined, base: CalendarAppt): CalendarAppt {
+  if (!lead) return base;
+  const saved = answerTo(lead.answers, /saved|assets|invest|savings/);
+  return {
+    ...base,
+    leadId: lead.id,
+    name: lead.name,
+    phone: lead.phone ?? base.phone,
+    email: lead.email ?? base.email,
+    city: lead.city ?? base.city,
+    state: lead.state ?? base.state,
+    source: matchSource(client, lead.source) !== OTHER ? matchSource(client, lead.source) : lead.source,
+    age: answerTo(lead.answers, /old|age/) ?? base.age,
+    assets: base.assets ?? assetsFrom(saved, () => 0.5),
+    assetsLabel: base.assetsLabel ?? saved,
+    quiz: { title: lead.source, answers: lead.answers },
+  };
+}
+
+function bookedToAppt(client: Client, b: BookedAppt, leads: Lead[]): CalendarAppt {
+  const lead = leads.find((l) => l.id === b.leadId);
+  return fromLead(client, lead, {
+    id: `bk~${b.id}`,
+    origin: "booked",
+    agentId: b.agentId,
+    date: b.date,
+    time: b.time,
+    minutes: b.minutes,
+    status: b.status,
+    name: lead?.name ?? "Lead",
+    assets: null,
+    city: "Unknown",
+    state: "Unknown",
+    source: OTHER,
+    apptType: b.apptType,
+  });
+}
+
+/** Matches a Google Calendar event to a lead by email, phone or full name mentioned in the event. */
+function leadForEvent(leads: Lead[], text: string) {
+  const t = text.toLowerCase();
+  const digits = text.replace(/\D/g, "");
+  return leads.find(
+    (l) =>
+      (l.email && t.includes(l.email.toLowerCase())) ||
+      (l.phone && l.phone.replace(/\D/g, "").slice(-10).length === 10 && digits.includes(l.phone.replace(/\D/g, "").slice(-10))) ||
+      (l.name.includes(" ") && t.includes(l.name.toLowerCase())),
+  );
+}
+
+async function googleAppts(client: Client, dates: string[], today: { date: string; minutes: number }, leads: Lead[], warnings: string[]) {
+  const out: CalendarAppt[] = [];
+  await Promise.all(
+    client.agents
+      .filter((a) => a.googleIcsUrl)
+      .map(async (agent) => {
+        try {
+          const events = await fetchIcs(agent.googleIcsUrl!, client.timeZone);
+          for (const ev of events) {
+            if (ev.allDay) continue; // all-day items are blocks / reminders, not appointments
+            const local = nowIn(client.timeZone, ev.start);
+            if (!dates.includes(local.date)) continue;
+            const minutes = ev.end ? Math.max(15, Math.round((ev.end.getTime() - ev.start.getTime()) / 60_000)) : 60;
+            const past = local.date < today.date || (local.date === today.date && local.minutes + minutes <= today.minutes);
+            const lead = leadForEvent(leads, `${ev.summary}\n${ev.description}\n${ev.location}`);
+            const title = ev.summary.replace(/^(appointment|appt|meeting|call)\s*(with|:|-)\s*/i, "").trim();
+            out.push(
+              fromLead(client, lead, {
+                id: `gc~${local.date}~${agent.id}~${createHash("sha1").update(ev.uid + ev.start.toISOString()).digest("hex").slice(0, 12)}`,
+                origin: "google",
+                agentId: agent.id,
+                date: local.date,
+                time: hhmm(local.minutes),
+                minutes,
+                status: ev.cancelled ? "Cancelled" : past ? "Showed" : "Scheduled",
+                name: title || "Google Calendar event",
+                assets: null,
+                city: "Unknown",
+                state: "Unknown",
+                source: "Google Calendar",
+                apptType: typeFromTitle(ev.summary) ?? typeFromTitle(ev.description),
+              }),
+            );
+          }
+        } catch (err) {
+          warnings.push(`Couldn't read ${agent.name}'s Google Calendar (${(err as Error).message}). Check the calendar address in settings.`);
+        }
+      }),
+  );
+  return out;
 }
 
 export async function getCalendarWeek(client: Client, start: string): Promise<CalendarWeek> {
   const today = nowIn(client.timeZone);
   const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  const warnings: string[] = [];
+  let agents = client.agents;
+  let base: CalendarAppt[] = [];
+  let source: "ghl" | "demo" = "demo";
+  const parts: string[] = [];
+
   if (usesLiveData(client)) {
     try {
-      const { agents, appts } = await liveDays(client, dates, today);
-      return { agents, today, days: dates.map((date) => ({ date, appts: appts.filter((a) => a.date === date) })), source: "ghl", warnings: [] };
+      const live = await liveDays(client, dates, today);
+      agents = live.agents;
+      base = live.appts.map((a) => ({ ...a, origin: "crm" as const }));
+      source = "ghl";
+      parts.push("OnRadar CRM");
     } catch (err) {
       console.error(`Calendar failed for ${client.id}:`, err);
-      return {
-        agents: client.agents,
-        today,
-        days: dates.map((date) => ({ date, appts: sampleDay(client, date, today) })),
-        source: "demo",
-        warnings: ["Live calendar is temporarily unavailable, so sample appointments are shown."],
-      };
+      warnings.push("Live calendar is temporarily unavailable.");
     }
+  } else if (client.calendarSamples !== false) {
+    base = dates.flatMap((date) => sampleDay(client, date, today)).map((a) => ({ ...a, origin: "sample" as const }));
+    parts.push("Sample data");
   }
-  return { agents: client.agents, today, days: dates.map((date) => ({ date, appts: sampleDay(client, date, today) })), source: "demo", warnings: [] };
+
+  const leads = await listLeads(client.id);
+  const booked = (await listBooked(client.id)).filter((b) => dates.includes(b.date)).map((b) => bookedToAppt(client, b, leads));
+  if (booked.length) parts.push("Booked from Leads");
+  const google = await googleAppts(client, dates, today, leads, warnings);
+  if (client.agents.some((a) => a.googleIcsUrl)) parts.push("Google Calendar");
+
+  const all = [...base, ...booked, ...google];
+  return {
+    agents,
+    today,
+    days: dates.map((date) => ({ date, appts: all.filter((a) => a.date === date).sort((a, b) => a.time.localeCompare(b.time)) })),
+    source,
+    label: parts.join(" + ") || "No calendars connected",
+    warnings,
+  };
 }
 
 /** One appointment with its prospect's full quiz answers (for the bio page). */
 export async function getAppointment(client: Client, id: string) {
-  const [date] = id.split("~");
+  if (id.startsWith("bk~")) {
+    const b = (await listBooked(client.id)).find((x) => x.id === id.slice(3));
+    return b ? { appt: bookedToAppt(client, b, await listLeads(client.id)), agents: client.agents } : null;
+  }
+  if (id.startsWith("gc~")) {
+    const date = id.split("~")[1];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    const w = await getCalendarWeek(client, weekStart(date));
+    const hit = w.days.flatMap((d) => d.appts).find((a) => a.id === id);
+    return hit ? { appt: hit, agents: w.agents } : null;
+  }
   if (id.startsWith("live~")) {
     const today = nowIn(client.timeZone);
-    const week = await getCalendarWeek(client, weekStart(today.date));
     for (const offset of [0, -7, 7]) {
-      const w = offset === 0 ? week : await getCalendarWeek(client, addDays(weekStart(today.date), offset));
+      const w = await getCalendarWeek(client, addDays(weekStart(today.date), offset));
       const hit = w.days.flatMap((d) => d.appts).find((a) => a.id === id);
       if (hit) return { appt: hit, agents: w.agents };
     }
     return null;
   }
+  const [date] = id.split("~");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const appt = sampleDay(client, date, nowIn(client.timeZone)).find((a) => a.id === id);
-  return appt ? { appt, agents: client.agents } : null;
+  return appt ? { appt: { ...appt, origin: "sample" as const }, agents: client.agents } : null;
 }

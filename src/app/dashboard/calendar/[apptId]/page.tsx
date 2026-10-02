@@ -15,7 +15,7 @@ export default async function ClientBioPage({ params }: { params: Promise<{ appt
   const id = decodeURIComponent(apptId);
   return (
     <AppShell user={user} client={client} active="dashboard">
-      <ProspectBio client={client} apptId={id} backHref={`/dashboard/calendar?day=${id.split("~")[0]}`} />
+      <ProspectBio client={client} apptId={id} calendarBase="/dashboard/calendar" />
     </AppShell>
   );
 }

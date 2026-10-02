@@ -4,6 +4,7 @@ import { money } from "@/lib/format";
 import type { Client } from "@/lib/types";
 import { ClientLogo } from "./ClientLogo";
 import { PrintButton } from "./PrintButton";
+import { setBookedStatus } from "@/app/actions/leads";
 
 function formatPhone(p?: string) {
   const d = (p ?? "").replace(/\D/g, "");
@@ -12,8 +13,9 @@ function formatPhone(p?: string) {
 }
 
 /** A one-page prospect brief for the agent: appointment, contact details and every quiz answer. */
-export async function ProspectBio({ client, apptId, backHref }: { client: Client; apptId: string; backHref: string }) {
+export async function ProspectBio({ client, apptId, calendarBase }: { client: Client; apptId: string; calendarBase: string }) {
   const found = await getAppointment(client, apptId);
+  const backHref = found ? `${calendarBase}?day=${found.appt.date}` : calendarBase;
   if (!found) {
     return (
       <div className="card">
@@ -79,6 +81,22 @@ export async function ProspectBio({ client, apptId, backHref }: { client: Client
             </div>
           ))}
         </dl>
+        {a.origin === "booked" && (
+          <div className="row no-print" style={{ gap: 8 }}>
+            <span className="muted small">Booked from Leads · update the outcome:</span>
+            {(["Confirmed", "Showed", "No-show", "Cancelled"] as const).map((st) => (
+              <form key={st} action={setBookedStatus}>
+                <input type="hidden" name="clientId" value={client.id} />
+                <input type="hidden" name="id" value={a.id} />
+                <input type="hidden" name="status" value={st} />
+                <input type="hidden" name="returnTo" value={backHref} />
+                <button className={a.status === st ? "btn sm primary" : "btn sm"} type="submit">
+                  {st}
+                </button>
+              </form>
+            ))}
+          </div>
+        )}
         {p?.newMoney && (
           <div className="bio-callout">
             <b>New money: {money0(p.newMoney.amount)}</b> from {p.newMoney.source.toLowerCase()} · {p.newMoney.timing.toLowerCase()}

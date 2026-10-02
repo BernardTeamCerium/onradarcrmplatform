@@ -271,6 +271,10 @@ export async function saveAgents(form: FormData) {
   const ids = form.getAll("agentId").map(String);
   const names = form.getAll("agentName").map((v) => String(v).trim());
   const crm = form.getAll("crmUserId").map((v) => String(v).trim());
+  const ics = form.getAll("googleIcsUrl").map((v) => String(v).trim().replace(/^webcal:/i, "https:"));
+  if (ics.some((u) => u && !/^https:\/\/[^\s]+$/i.test(u))) {
+    redirect(settingsPath(id, "Google Calendar addresses must start with https:// (use the secret address in iCal format).") + "#agents");
+  }
   const tz = str(form, "timeZone");
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
@@ -279,9 +283,10 @@ export async function saveAgents(form: FormData) {
   }
   await mutateClient(id, (c) => {
     c.agents = names
-      .map((name, i) => ({ id: ids[i] || newId("ag"), name, crmUserId: crm[i] || undefined }))
+      .map((name, i) => ({ id: ids[i] || newId("ag"), name, crmUserId: crm[i] || undefined, googleIcsUrl: ics[i] || undefined }))
       .filter((a) => a.name);
     c.timeZone = tz || c.timeZone;
+    c.calendarSamples = form.get("calendarSamples") === "on";
   });
   redirect(settingsPath(id, "Agents saved.") + "#agents");
 }
