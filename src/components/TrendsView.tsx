@@ -1,4 +1,5 @@
 import { count, moneyShort, percent, signedPercent } from "@/lib/format";
+import { loadProduction, mergeYearly } from "@/lib/production";
 import { buildYears, gapsToTarget, type Gap, type YearView } from "@/lib/trends";
 import type { Client } from "@/lib/types";
 import { YearBars } from "./YearBars";
@@ -18,6 +19,7 @@ const TARGET_KEY: Record<Money, "targetSubmitted" | "targetPaid" | "targetCharge
 
 function Delta({ value, upIsGood = true, suffix = "" }: { value: number | null; upIsGood?: boolean; suffix?: string }) {
   if (value === null) return <span className="muted">—</span>;
+  if (Math.abs(value) < 0.005) return <span className="muted">Flat{suffix}</span>;
   const good = value >= 0 === upIsGood;
   return (
     <span style={{ color: good ? "var(--good)" : "var(--bad)", whiteSpace: "nowrap" }}>
@@ -80,8 +82,11 @@ function GapLine({ gap, lowerIsBetter }: { gap: Gap; lowerIsBetter?: boolean }) 
   );
 }
 
-export function TrendsView({ client }: { client: Client }) {
-  const years = buildYears(client.yearly);
+export async function TrendsView({ client }: { client: Client }) {
+  const production = await loadProduction(client);
+  const merged = mergeYearly(client.yearly, production);
+  // Growth needs the year before, so build from all years, then show the most recent three.
+  const years = buildYears(merged.years).slice(-3);
   if (years.length === 0) {
     return (
       <section className="card">
@@ -167,6 +172,7 @@ export function TrendsView({ client }: { client: Client }) {
         <div style={{ padding: "20px 20px 0" }}>
           <h2>Growth and targets</h2>
           <p className="muted small">
+            {merged.fromLog.size > 0 ? "Submitted, paid and chargebacks come from the Production tab. " : ""}
             Growth compares each year with the one before.{current.ytd ? ` ${current.year} is compared on its full-year pace (${pctElapsed}% of the year so far).` : ""}
           </p>
         </div>

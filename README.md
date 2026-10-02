@@ -55,6 +55,16 @@ The **Geo** tab shows the same measures as Marketing by **state** or **city**. E
 - **Spend:** it isn't recorded by place, so each source's spend is shared across places in proportion to the leads it produced there.
 - **With sample data:** it uses fictional distributions around Sibley's Louisiana and Mississippi Gulf Coast market.
 
+## Production
+
+The **Production** tab is where Sibley's team (any client login) and admins record production:
+
+- **Log a case:** date submitted, client, agent, product, carrier, premium, status and lead source. Change the status from Submitted to Paid, Chargeback or Declined in the list; it saves immediately and stamps the paid or chargeback date.
+- **Historical numbers:** enter totals per agent for a month or a whole year (submitted, paid, chargebacks, number of cases), or import a CSV of past cases or totals. Download the templates from the tab; Excel and Google Sheets both save CSV. Importing the same totals again updates them, and identical cases aren't added twice. Rows that can't be read are listed by row number.
+- **Totals:** by year, all time and by agent. There's also a CSV export of everything.
+
+Everything logged here feeds the rest of the platform. **Trends** uses it for submitted, paid and chargebacks in any year that has production (targets and appointment counts still come from settings), and shows the last three years. The **Dashboard**'s submitted premium comes from it too, with month and year totals spread evenly across their days. Sibley starts with their reported 2024, 2025 and 2026 year-to-date totals, split across agents for illustration. Use **Remove sample entries** before importing real history.
+
 ## Trends
 
 The **Trends** tab shows the last three years (or however many are entered) of **submitted, paid and chargebacks**. Each year shows its growth rate, its target and how far off target it is. For the current year it uses year-to-date numbers, compares growth on the full-year pace, and spells out **what it takes to hit the targets**: dollars needed per month versus the current pace, and the same gap in connected appointments and appointments set. It also covers appointments per year: appointments set, connected appointments, connected rate and paid production per connect.

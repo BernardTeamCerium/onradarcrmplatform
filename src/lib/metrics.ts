@@ -2,6 +2,7 @@ import "server-only";
 import * as ghl from "./ghl";
 import { dayKey, eachDay, previousRange, type DateRange } from "./ranges";
 import { liveBySource, matchSource, sampleBySource } from "./sources";
+import { hasProduction, loadProduction, submittedInRange } from "./production";
 import { cleanPlace, liveByGeo, sampleByGeo, type GeoFact } from "./geo";
 import type { Client, DailyPoint, DashboardData, Metrics } from "./types";
 
@@ -29,17 +30,35 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
     } catch (err) {
       // Never cache a failure; surface it on the dashboard instead of crashing the page.
       console.error(`Live data failed for ${client.id}:`, err);
-      return {
+      return withProductionPremium(client, range, {
         ...demoData(client, range),
         source: "demo",
         warnings: ["Live data is temporarily unavailable, so sample data is shown. Please check back shortly."],
-      };
+      });
     }
   } else {
     data = demoData(client, range);
   }
+  data = await withProductionPremium(client, range, data);
   cache.set(key, { at: Date.now(), data });
   return data;
+}
+
+/** When the team logs production, submitted premium comes from that log instead of the CRM or sample data. */
+async function withProductionPremium(client: Client, range: DateRange, data: DashboardData): Promise<DashboardData> {
+  const entries = await loadProduction(client);
+  if (!hasProduction(entries)) return data;
+  const prev = previousRange(range);
+  const swap = (m: Metrics, premium: number): Metrics => ({
+    ...m,
+    premium,
+    estimatedReturn: m.spend > 0 ? (premium - m.spend) / m.spend : null,
+  });
+  return {
+    ...data,
+    metrics: swap(data.metrics, Math.round(submittedInRange(entries, range.start, range.end))),
+    previous: swap(data.previous, Math.round(submittedInRange(entries, prev.start, prev.end))),
+  };
 }
 
 // ---------------------------------------------------------------------------

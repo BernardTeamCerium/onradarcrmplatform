@@ -376,7 +376,7 @@ export default async function ClientSettings({
               <h2>Yearly results &amp; targets</h2>
               <p className="muted small">
                 Drives the Trends tab. For the current year, enter year-to-date numbers; growth and &ldquo;what it takes&rdquo; use the full-year pace.
-                Chargebacks target is a limit (lower is better). Leave a target blank to hide it.
+                Chargebacks target is a limit (lower is better). Leave a target blank to hide it. Years with entries on the Production tab use the logged submitted, paid and chargebacks instead of the numbers here.
               </p>
             </div>
             <Link className="btn sm" href={`/admin/clients/${id}/trends`}>Open trends</Link>

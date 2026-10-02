@@ -322,3 +322,54 @@ export interface ProspectProfile {
   notes: string[];
   prep: string[];
 }
+
+export const CASE_STATUSES = ["Submitted", "Paid", "Chargeback", "Declined"] as const;
+export type CaseStatus = (typeof CASE_STATUSES)[number];
+
+export const PRODUCTS = [
+  "Fixed indexed annuity",
+  "MYGA",
+  "Variable annuity",
+  "Income annuity",
+  "Whole life",
+  "Indexed universal life",
+  "Term life",
+  "Long-term care",
+  "Other",
+] as const;
+
+/**
+ * One line of production: either a single case (kind "case") or a historical total for an agent over a
+ * month or year (kind "summary"), used to load history that isn't available case by case.
+ */
+export interface ProductionEntry {
+  id: string;
+  kind: "case" | "summary";
+  agentName: string;
+  agentId?: string;
+  // Case fields
+  /** Date submitted (YYYY-MM-DD). */
+  date?: string;
+  clientName?: string;
+  carrier?: string;
+  product?: string;
+  premium?: number;
+  status?: CaseStatus;
+  paidDate?: string;
+  chargebackDate?: string;
+  /** Defaults to the full premium. */
+  chargebackAmount?: number;
+  source?: string;
+  notes?: string;
+  // Summary fields
+  /** "YYYY" or "YYYY-MM". */
+  period?: string;
+  submitted?: number;
+  paid?: number;
+  chargebacks?: number;
+  cases?: number;
+  createdAt: string;
+  createdBy?: string;
+  updatedAt?: string;
+  sample?: boolean;
+}
