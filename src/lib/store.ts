@@ -62,6 +62,7 @@ export async function readJson<T>(key: string): Promise<T | null> {
 }
 
 export const writeJson = (key: string, value: unknown) => writeBytes(key, JSON.stringify(value));
+export const deleteJson = (key: string) => deleteBytes(key);
 
 export function randomSecret(bytes = 24) {
   return Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString("base64url");

@@ -30,6 +30,8 @@ import { money } from "@/lib/format";
 import { usesLiveData } from "@/lib/metrics";
 import { isSampleAgent, readDb } from "@/lib/store";
 import { isSampleLead, listLeads } from "@/lib/leads";
+import { connectMonday, disconnectMonday, saveMondayMapping } from "@/app/actions/monday";
+import { loadSnapshot } from "@/lib/monday";
 import { loadProduction } from "@/lib/production";
 import type { YearRecord } from "@/lib/types";
 
@@ -62,6 +64,20 @@ export default async function ClientSettings({
   const emailUrl = `${origin}/api/leads/${id}/email?key=${client.inboundKey}`;
   const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
   const productionEmailUrl = `${origin}/api/production/${id}/email?key=${client.inboundKey}`;
+  const monday = client.monday;
+  const mondaySnap = monday ? await loadSnapshot(id) : null;
+  const mondayStages = mondaySnap
+    ? [...new Set([...mondaySnap.stages, ...mondaySnap.items.map((it) => (monday?.columns.stage ? it.values[monday.columns.stage]?.trim() : "")).filter((x): x is string => !!x)])]
+    : [];
+  const MONDAY_FIELDS: [keyof NonNullable<typeof monday>["columns"], string, string][] = [
+    ["stage", "Stage", "Status column with the deal stages (In Review … Paid)"],
+    ["value", "Deal value", "Numbers column with each deal's amount"],
+    ["actual", "Actual (paid) value", "Optional: used for won deals when filled in"],
+    ["owner", "Rep / owner", "People column"],
+    ["closeDate", "Close date", "Date column; won deals are charted by it"],
+    ["source", "Lead source", "Optional"],
+    ["product", "Product or carrier", "Optional"],
+  ];
   const sampleLeadCount = (await listLeads(id)).filter(isSampleLead).length;
   const sampleProduction = (await loadProduction(client)).filter((e) => e.sample).length;
   const sampleAgents = client.agents.filter(isSampleAgent);
@@ -512,6 +528,94 @@ export default async function ClientSettings({
               <span className="hint">POST subject, from, date, text and/or html (Postmark and Mailgun inbound work as-is)</span>
             </label>
           </details>
+        </section>
+
+        {/* Monday.com */}
+        <section className="card" id="monday">
+          <div className="card-head">
+            <div>
+              <h2>Monday.com pipeline</h2>
+              <p className="muted small">
+                Brings the client&apos;s Monday.com deals board (past and current prospects) into the <b>Pipeline</b> tab: open pipeline, paid
+                deals, stages, results by rep and every prospect. It refreshes on its own every 30 minutes, and the team can refresh on
+                demand. Read-only: nothing is changed in Monday.com.
+              </p>
+            </div>
+            <span className="badge">
+              <span className="dot" style={{ background: mondaySnap ? "var(--good)" : "var(--ink-muted)" }} />
+              {mondaySnap ? `${mondaySnap.items.length.toLocaleString("en-US")} items` : "Not connected"}
+            </span>
+          </div>
+          <form action={connectMonday} className="stack" style={{ gap: 12 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <div className="form-grid">
+              <label className="field">
+                API token
+                <input name="token" type="password" autoComplete="off" placeholder={monday?.token ? "Leave blank to keep the current token" : "eyJhbGciOi…"} />
+                <span className="hint">In Monday.com: your avatar → <b>Developers</b> → <b>My access tokens</b> → Copy. Use an account that can see the board.</span>
+              </label>
+              <label className="field">
+                Deals board link
+                <input name="board" defaultValue={monday ? (mondaySnap?.accountSlug ? `https://${mondaySnap.accountSlug}.monday.com/boards/${monday.boardId}` : monday.boardId) : ""} placeholder="https://yourteam.monday.com/boards/1234567890" />
+                <span className="hint">Open the deals board (the one behind the Sales Pipeline dashboard) and copy the address bar</span>
+              </label>
+            </div>
+            {monday?.lastResult && <p className="small secondary" style={{ margin: 0 }}>Last sync: {monday.lastResult}</p>}
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button className="btn primary" type="submit">{monday ? "Save and sync now" : "Connect and sync"}</button>
+              {monday && <Link className="btn" href={`/admin/clients/${id}/pipeline`}>Open pipeline</Link>}
+            </div>
+          </form>
+
+          {monday && mondaySnap && (
+            <form action={saveMondayMapping} className="stack" style={{ gap: 12, marginTop: 20 }}>
+              <input type="hidden" name="clientId" value={id} />
+              <h3 style={{ margin: 0 }}>Columns on “{mondaySnap.boardName}”</h3>
+              <p className="small secondary" style={{ margin: 0 }}>These were matched from the column names. Change any that are wrong.</p>
+              <div className="form-grid">
+                {MONDAY_FIELDS.map(([key, label, hint]) => (
+                  <label className="field" key={key}>
+                    {label}
+                    <select name={key} defaultValue={monday.columns[key] ?? ""}>
+                      <option value="">—</option>
+                      {mondaySnap.columns.filter((c) => c.id !== "name").map((c) => (
+                        <option key={c.id} value={c.id}>{c.title} ({c.type})</option>
+                      ))}
+                    </select>
+                    <span className="hint">{hint}</span>
+                  </label>
+                ))}
+              </div>
+              {mondayStages.length > 0 && (
+                <div className="grid-2" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
+                  <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                    <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Won (paid) stages</legend>
+                    <div className="stack" style={{ gap: 4 }}>
+                      {mondayStages.map((st) => (
+                        <label key={st} className="checkbox"><input type="checkbox" name="won" value={st} defaultChecked={monday.wonStages.includes(st)} /> {st}</label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                    <legend className="small" style={{ fontWeight: 600, marginBottom: 6 }}>Lost stages</legend>
+                    <div className="stack" style={{ gap: 4 }}>
+                      {mondayStages.map((st) => (
+                        <label key={st} className="checkbox"><input type="checkbox" name="lost" value={st} defaultChecked={monday.lostStages.includes(st)} /> {st}</label>
+                      ))}
+                    </div>
+                    <span className="hint">Every other stage counts as open pipeline.</span>
+                  </fieldset>
+                </div>
+              )}
+              <div className="form-actions" style={{ marginTop: 0 }}><button className="btn primary" type="submit">Save mapping</button></div>
+            </form>
+          )}
+          {monday && (
+            <form action={disconnectMonday} style={{ marginTop: 12 }}>
+              <input type="hidden" name="clientId" value={id} />
+              <button className="btn sm danger" type="submit">Disconnect Monday.com</button>
+            </form>
+          )}
         </section>
 
         {/* Yearly results */}

@@ -227,6 +227,7 @@ tbody tr:hover { background: var(--surface-2); }
 .funnel-bar { height: 22px; border-radius: 0 4px 4px 0; background: var(--series-1); min-width: 2px; }
 .funnel-val { position: absolute; top: 2px; font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .funnel-val .muted { font-weight: 400; }
+@media (max-width: 520px) { .funnel-val .muted { display: none; } }
 details.table-view summary { cursor: pointer; font-size: 13px; color: var(--ink-2); margin-top: 12px; }
 
 /* ---------- Login ---------- */

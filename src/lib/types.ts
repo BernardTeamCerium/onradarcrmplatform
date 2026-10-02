@@ -110,6 +110,8 @@ export interface Client {
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
   /** Typeform API access for importing past responses. */
+  /** Monday.com deals board (past and current prospects) shown on the Pipeline tab. */
+  monday?: MondayConfig;
   typeformApi?: { token: string; formIds: string[]; region: "us" | "eu"; lastImportAt?: string; lastResult?: string };
   /** Key that lets the Gmail script and other tools post leads for this client. */
   inboundKey: string;
@@ -417,4 +419,42 @@ export interface ProductionEntry {
   createdBy?: string;
   updatedAt?: string;
   sample?: boolean;
+}
+
+/** Which board columns hold what (column ids), and which stage labels count as won or lost. */
+export interface MondayConfig {
+  token: string;
+  boardId: string;
+  columns: { stage?: string; value?: string; actual?: string; owner?: string; closeDate?: string; source?: string; product?: string };
+  wonStages: string[];
+  lostStages: string[];
+  lastSyncAt?: string;
+  lastResult?: string;
+}
+
+export interface MondayColumn {
+  id: string;
+  title: string;
+  type: string;
+}
+
+/** One board item, kept with every column's display text so the mapping can change without re-syncing. */
+export interface MondayItem {
+  id: string;
+  name: string;
+  group?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  values: Record<string, string>;
+}
+
+export interface MondaySnapshot {
+  syncedAt: string;
+  boardId: string;
+  boardName: string;
+  accountSlug?: string;
+  columns: MondayColumn[];
+  /** Stage labels in the board's order. */
+  stages: string[];
+  items: MondayItem[];
 }

@@ -72,6 +72,27 @@ The **Production** tab is where Sibley's team (any client login) and admins reco
 
 Everything logged here feeds the rest of the platform. **Trends** uses it for submitted, paid and chargebacks in any year that has production (targets and appointment counts still come from settings), and shows the last three years. The **Dashboard**'s submitted premium comes from it too, with month and year totals spread evenly across their days. Sibley starts with their reported 2024, 2025 and 2026 year-to-date totals, split across agents for illustration. Use **Remove sample entries** before importing real history.
 
+## Pipeline (Monday.com)
+
+The **Pipeline** tab brings in the client's Monday.com deals board, the board behind Monday's Sales Pipeline dashboards. It covers every past and current prospect:
+
+- Open pipeline, won (paid) value and count, average won deal, win rate, and average days to close.
+- Deals by stage, by value or count, in the board's own stage order. Bars are coloured open / won / lost.
+- Won value by month, and results by rep. A deal with two reps counts for both, with its value split between them.
+- A rep filter.
+- A searchable prospect list that links back to each item in Monday.com.
+
+**To connect:** go to Admin → client → **Settings → Monday.com pipeline** and enter:
+
+- an API token (Monday avatar → Developers → My access tokens)
+- the board link
+
+Columns are matched from their names (Stage, Deal Value, Actual Deal Value, Owner, Close Date) and can be changed. "Paid" counts as won, and "Cancelled" and "No Show" count as lost; tick other stages as needed. Every other stage is open pipeline.
+
+The connection is read-only. The board refreshes every 30 minutes when the tab is opened, and anyone can click **Refresh from Monday**. Boards of up to 20,000 items are read 500 at a time.
+
+Set `MONDAY_API_URL` only to point at a test server.
+
 ## Trends
 
 The **Trends** tab shows the last three years (or however many are entered) of **submitted, paid and chargebacks**. Each year shows its growth rate, its target and how far off target it is. For the current year it uses year-to-date numbers, compares growth on the full-year pace, and spells out **what it takes to hit the targets**: dollars needed per month versus the current pace, and the same gap in connected appointments and appointments set. It also covers appointments per year: appointments set, connected appointments, connected rate and paid production per connect.

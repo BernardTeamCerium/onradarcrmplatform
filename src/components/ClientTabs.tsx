@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /** Section tabs for one client. `base` is the dashboard URL (/dashboard or /admin/clients/<id>). */
-export function ClientTabs({ base, active, admin }: { base: string; active: "dashboard" | "engine" | "calendar" | "marketing" | "geo" | "leads" | "production" | "trends" | "settings"; admin?: boolean }) {
+export function ClientTabs({ base, active, admin }: { base: string; active: "dashboard" | "engine" | "calendar" | "marketing" | "geo" | "leads" | "production" | "pipeline" | "trends" | "settings"; admin?: boolean }) {
   const tabs = [
     { key: "dashboard", label: "Dashboard", href: base },
     { key: "engine", label: "Engine", href: `${base}/engine` },
@@ -15,6 +15,7 @@ export function ClientTabs({ base, active, admin }: { base: string; active: "das
       : []),
     { key: "leads", label: "Leads", href: `${base}/leads` },
     { key: "production", label: "Production", href: `${base}/production` },
+    { key: "pipeline", label: "Pipeline", href: `${base}/pipeline` },
     { key: "trends", label: "Trends", href: `${base}/trends` },
     ...(admin ? [{ key: "settings", label: "Settings", href: `${base}/settings` }] : []),
   ];
