@@ -13,6 +13,7 @@ import {
   deleteYear,
   deleteClient,
   goLive,
+  savePipelineStages,
   deleteSpend,
   deleteUser,
   removeLogo,
@@ -32,6 +33,7 @@ import { isSampleAgent, readDb } from "@/lib/store";
 import { isSampleLead, listLeads } from "@/lib/leads";
 import { connectMonday, disconnectMonday, saveMondayMapping } from "@/app/actions/monday";
 import { loadSnapshot } from "@/lib/monday";
+import { stagesFor, STUCK_DAYS } from "@/lib/stages";
 import { loadProduction } from "@/lib/production";
 import type { YearRecord } from "@/lib/types";
 
@@ -528,6 +530,25 @@ export default async function ClientSettings({
               <span className="hint">POST subject, from, date, text and/or html (Postmark and Mailgun inbound work as-is)</span>
             </label>
           </details>
+        </section>
+
+        {/* Pipeline stages */}
+        <section className="card" id="stages">
+          <div className="card-head">
+            <div>
+              <h2>Pipeline stages</h2>
+              <p className="muted small">
+                The columns of the pending-business board on the Pipeline tab, in order, one per line. Status emails are placed by stage name
+                (and common wording such as &ldquo;check mailed&rdquo; → Funds En Route). Cases {STUCK_DAYS}+ days in one stage are flagged as stuck.
+              </p>
+            </div>
+          </div>
+          <form action={savePipelineStages} className="stack" style={{ gap: 10 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <textarea name="stages" rows={8} defaultValue={stagesFor(client).join("\n")} style={{ height: "auto", padding: 10, maxWidth: 360 }} aria-label="Pipeline stages" />
+            {client.pipelineStages && <label className="checkbox"><input type="checkbox" name="reset" /> Reset to the default stages</label>}
+            <div><button className="btn primary" type="submit">Save stages</button></div>
+          </form>
         </section>
 
         {/* Monday.com */}

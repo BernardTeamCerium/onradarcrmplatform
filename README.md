@@ -72,7 +72,21 @@ The **Production** tab is where Sibley's team (any client login) and admins reco
 
 Everything logged here feeds the rest of the platform. **Trends** uses it for submitted, paid and chargebacks in any year that has production (targets and appointment counts still come from settings), and shows the last three years. The **Dashboard**'s submitted premium comes from it too, with month and year totals spread evenly across their days. Sibley starts with their reported 2024, 2025 and 2026 year-to-date totals, split across agents for illustration. Use **Remove sample entries** before importing real history.
 
-## Pipeline (Monday.com)
+## Pipeline: pending business
+
+The top of the **Pipeline** tab is a board of every submitted case that isn't paid yet, by stage:
+
+> Submitted → In Review → Suit Req → Final Review → AOF → Needs Attention → Transfer Out → Transfer Out NIGO → Awaiting Transfer → Funds En Route
+
+Admins can edit the stage list in **Settings → Pipeline stages**.
+
+- **Totals:** pending premium, money in transfer, stuck cases (14+ days in one stage, flagged on the card), average days pending, and premium issued or paid in the last 30 days.
+- **Moving cases:** IMO status emails place and move cases automatically, by stage name or common wording (e.g. "check mailed" → Funds En Route). The team can also drag a card to another column or use its menu. Moves are recorded in the case's update history.
+- **Leaving the board:** an "Issued" or "Paid" email (or setting the status on the Production tab) takes the case off the board and counts it as paid.
+
+The cases are the same ones as on the Production tab, so nothing is entered twice.
+
+## Pipeline: previous prospects (Monday.com)
 
 The **Pipeline** tab brings in the client's Monday.com deals board, the board behind Monday's Sales Pipeline dashboards. It covers every past and current prospect:
 

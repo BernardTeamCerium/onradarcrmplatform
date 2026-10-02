@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "crypto";
 import { htmlToText } from "./inbound";
 import { normaliseStatus, withProduction } from "./production";
+import { stageFromStatus, stagesFor } from "./stages";
 import { newId } from "./store";
 import type { Agent, CaseStatus, Client, ProductionEntry } from "./types";
 
@@ -168,6 +169,7 @@ export async function applyCaseEmail(client: Client, c: CaseEmail, by = "Email")
   const agent = c.advisor ? matchAdvisor(client.agents, c.advisor) : client.agents[0];
   const update = { at: sentAt, status: c.status ?? "Update", note: c.note, from: c.from, ref: c.ref };
   const norm = (s?: string) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const stage = stageFromStatus(c.status, stagesFor(client));
 
   return withProduction(client, (entries) => {
     const existing = entries.find(
@@ -184,6 +186,10 @@ export async function applyCaseEmail(client: Client, c: CaseEmail, by = "Email")
       // Only the newest email sets the current status, and a case never moves back from Paid to Submitted.
       if (latest.ref === c.ref) {
         if (c.status) existing.carrierStatus = c.status;
+        if (stage && stage !== existing.stage) {
+          existing.stage = stage;
+          existing.stageAt = sentAt;
+        }
         const cur = existing.status ?? "Submitted";
         // Cancelled before it was ever paid is a declined case, not a chargeback.
         const next: CaseStatus = mapped === "Chargeback" && cur === "Submitted" ? "Declined" : mapped;
@@ -216,6 +222,8 @@ export async function applyCaseEmail(client: Client, c: CaseEmail, by = "Email")
       chargebackDate: mapped === "Chargeback" ? day : undefined,
       caseNumber: c.caseNumber,
       carrierStatus: c.status,
+      stage: mapped === "Submitted" ? stage ?? stagesFor(client)[0] : undefined,
+      stageAt: sentAt,
       updates: [update],
       createdAt: new Date().toISOString(),
       createdBy: by,

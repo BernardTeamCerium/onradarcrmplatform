@@ -411,3 +411,19 @@ export async function deleteUser(form: FormData) {
   revalidatePath("/admin", "layout");
   redirect(`${back}${sep}msg=${encodeURIComponent("User removed.")}`);
 }
+
+export async function savePipelineStages(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const seen = new Set<string>();
+  const stages = str(form, "stages")
+    .split(/\r?\n/)
+    .map((s) => s.trim().slice(0, 40))
+    .filter((s) => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
+  if (form.get("reset") === "on" || stages.length === 0) {
+    await mutateClient(id, (c) => (c.pipelineStages = undefined));
+    redirect(settingsPath(id, "Pipeline stages reset to the defaults.") + "#stages");
+  }
+  await mutateClient(id, (c) => (c.pipelineStages = stages.slice(0, 20)));
+  redirect(settingsPath(id, "Pipeline stages saved.") + "#stages");
+}

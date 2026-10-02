@@ -26,7 +26,7 @@ export default async function AdminPipelinePage({
         <Link href="/admin" className="muted">← All clients</Link>
       </p>
       <div className="stack">
-        <ClientHeader client={client} subtitle="Prospects and results from Monday.com" />
+        <ClientHeader client={client} subtitle="Pending business and past prospects" />
         <ClientTabs base={`/admin/clients/${id}`} active="pipeline" admin />
         <PipelineView client={client} basePath={`/admin/clients/${id}/pipeline`} search={await searchParams} admin />
       </div>

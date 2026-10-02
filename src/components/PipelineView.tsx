@@ -2,12 +2,97 @@ import Link from "next/link";
 import { syncMonday } from "@/app/actions/monday";
 import { count, money, moneyShort, percent } from "@/lib/format";
 import { getSnapshot, summarise, toDeals } from "@/lib/monday";
+import { loadProduction } from "@/lib/production";
+import { isPending, stageOf, stagesFor, STUCK_DAYS } from "@/lib/stages";
 import type { Client } from "@/lib/types";
+import { PendingBoard } from "./PendingBoard";
 import { MonthBars, StageBars } from "./PipelineCharts";
 import { PipelineDeals } from "./PipelineDeals";
 
+const DAY = 86_400_000;
+
+/** Pending business (from the Production tab and status emails), then the Monday.com prospect history. */
+export async function PipelineView(props: { client: Client; basePath: string; search: { rep?: string; msg?: string }; admin?: boolean }) {
+  const { client, admin } = props;
+  const entries = await loadProduction(client);
+  const stages = stagesFor(client);
+  const now = Date.now();
+  const since = (iso?: string) => (iso ? Math.max(0, Math.floor((now - Date.parse(iso.length === 10 ? `${iso}T12:00:00Z` : iso)) / DAY)) : 0);
+  const pending = entries.filter(isPending).map((e) => {
+    const stage = stageOf(e, stages);
+    return {
+      id: e.id,
+      clientName: e.clientName ?? "Unnamed case",
+      agentName: e.agentName,
+      premium: e.premium ?? 0,
+      product: e.product,
+      carrier: e.carrier,
+      caseNumber: e.caseNumber,
+      carrierStatus: e.carrierStatus,
+      stage,
+      daysInStage: since(e.stage === stage ? e.stageAt ?? e.date : e.date),
+      daysPending: since(e.date),
+    };
+  });
+  const sum = (xs: { premium: number }[]) => xs.reduce((a, x) => a + x.premium, 0);
+  const moving = pending.filter((p) => /transfer|funds/i.test(p.stage));
+  const stuck = pending.filter((p) => p.daysInStage >= STUCK_DAYS);
+  const paid30 = entries.filter((e) => e.kind === "case" && e.status === "Paid" && e.paidDate && since(e.paidDate) <= 30);
+  const avgDays = pending.length ? pending.reduce((a, p) => a + p.daysPending, 0) / pending.length : null;
+
+  return (
+    <div className="stack">
+      {props.search.msg && <p className="flash" role="status">{props.search.msg}</p>}
+      <section className="stack" style={{ gap: 14 }} aria-labelledby="pending-h">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <div>
+            <h2 id="pending-h" style={{ margin: 0 }}>Pending business</h2>
+            <p className="muted small" style={{ margin: "4px 0 0" }}>
+              Every submitted case that isn&apos;t paid yet. Status emails from the IMO move cases automatically; drag a card (or use its menu)
+              to move it yourself. Paid, declined and chargebacks are set on the{" "}
+              <Link href={props.basePath.replace(/\/pipeline$/, "/production")}>Production</Link> tab.
+            </p>
+          </div>
+        </div>
+        <div className="kpi-grid five" aria-label="Pending totals">
+          {[
+            ["Pending premium", moneyShort(sum(pending)), `${count(pending.length)} case${pending.length === 1 ? "" : "s"}`],
+            ["Money in transfer", moneyShort(sum(moving)), `${count(moving.length)} in transfer or funds en route`],
+            ["Stuck", count(stuck.length), stuck.length ? `${moneyShort(sum(stuck))} · ${STUCK_DAYS}+ days in one stage` : `Nothing ${STUCK_DAYS}+ days in one stage`],
+            ["Days pending", avgDays === null ? "—" : `${Math.round(avgDays)}`, "Average since submitted"],
+            ["Paid · last 30 days", moneyShort(paid30.reduce((a, e) => a + (e.premium ?? 0), 0)), `${count(paid30.length)} case${paid30.length === 1 ? "" : "s"} issued or paid`],
+          ].map(([l, v, sub]) => (
+            <div className="kpi" key={l}>
+              <div className="label">{l}</div>
+              <div className="value">{v}</div>
+              <span className="delta">{sub}</span>
+            </div>
+          ))}
+        </div>
+        {pending.length ? (
+          <PendingBoard clientId={client.id} stages={stages} cards={pending} stuckDays={STUCK_DAYS} />
+        ) : (
+          <p className="card muted">
+            No pending cases. Log a case or import a status email on the Production tab, or set up production emails{admin ? " in Settings" : ""}.
+          </p>
+        )}
+      </section>
+
+      {(client.monday || admin) && (
+        <section className="stack" style={{ gap: 14, marginTop: 12 }} aria-labelledby="monday-h">
+          <div>
+            <h2 id="monday-h" style={{ margin: 0 }}>Previous prospects · Monday.com</h2>
+            <p className="muted small" style={{ margin: "4px 0 0" }}>History and results from the Monday.com deals board.</p>
+          </div>
+          <MondaySection {...props} search={{ rep: props.search.rep }} />
+        </section>
+      )}
+    </div>
+  );
+}
+
 /** Past and current prospects from the client's Monday.com deals board. */
-export async function PipelineView({
+async function MondaySection({
   client,
   basePath,
   search,
@@ -22,10 +107,8 @@ export async function PipelineView({
   if (!cfg) {
     return (
       <section className="card">
-        <h2>Pipeline from Monday.com</h2>
-        <p className="secondary">
-          This tab shows every prospect on your Monday.com deals board (open pipeline, paid deals, stages and results by rep) once
-          the board is connected.
+        <p className="secondary" style={{ marginTop: 0 }}>
+          Connect the Monday.com deals board to bring in past prospects: paid deals, stages, win rate and results by rep.
         </p>
         {admin ? (
           <Link className="btn primary" href={`/admin/clients/${client.id}/settings#monday`}>Connect Monday.com</Link>
@@ -52,9 +135,9 @@ export async function PipelineView({
 
       <div className="row" style={{ justifyContent: "space-between" }}>
         <nav className="chips" aria-label="Rep">
-          <Link className={!rep ? "chip on" : "chip"} href={basePath}>All reps</Link>
+          <Link className={!rep ? "chip on" : "chip"} href={`${basePath}#monday-h`}>All reps</Link>
           {reps.map((r) => (
-            <Link key={r} className={rep === r ? "chip on" : "chip"} href={`${basePath}?rep=${encodeURIComponent(r)}`}>{r}</Link>
+            <Link key={r} className={rep === r ? "chip on" : "chip"} href={`${basePath}?rep=${encodeURIComponent(r)}#monday-h`}>{r}</Link>
           ))}
         </nav>
         <form action={syncMonday} className="row" style={{ gap: 10 }}>

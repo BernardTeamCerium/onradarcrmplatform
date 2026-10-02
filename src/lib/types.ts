@@ -110,6 +110,8 @@ export interface Client {
   /** Shared secret used to verify Typeform webhook signatures for this client. */
   typeformSecret: string;
   /** Typeform API access for importing past responses. */
+  /** Stages of the pending-business board, in order (defaults to DEFAULT_STAGES). */
+  pipelineStages?: string[];
   /** Monday.com deals board (past and current prospects) shown on the Pipeline tab. */
   monday?: MondayConfig;
   typeformApi?: { token: string; formIds: string[]; region: "us" | "eu"; lastImportAt?: string; lastResult?: string };
@@ -408,6 +410,9 @@ export interface ProductionEntry {
   carrierStatus?: string;
   /** Status updates read from emails, oldest first. */
   updates?: CaseUpdate[];
+  /** Where a pending case sits on the pipeline board (e.g. "Funds En Route"), and since when. */
+  stage?: string;
+  stageAt?: string;
   // Summary fields
   /** "YYYY" or "YYYY-MM". */
   period?: string;

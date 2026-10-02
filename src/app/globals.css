@@ -351,3 +351,17 @@ table.compact tr.geo-sub td:first-child { background: var(--surface-2); }
 a.chip { text-decoration: none; }
 .bio-callout { background: var(--surface-2); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 14px; }
 .book-form { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+
+/* ---------- Pipeline board ---------- */
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.board-col { background: var(--surface-2); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; border: 1px dashed transparent; }
+.board-col.over { border-color: var(--series-1); }
+.board-col header { padding: 2px 4px 4px; font-size: 13px; }
+.board-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; box-shadow: var(--shadow); cursor: grab; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.board-card:active { cursor: grabbing; }
+.board-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-amt { font-weight: 650; font-variant-numeric: tabular-nums; }
+.board-age { font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
+.board-age.stuck { color: var(--warn-ink); background: var(--warn-bg); padding: 1px 6px; border-radius: 999px; font-weight: 600; }
+.board-move { height: 28px; width: 100%; font-size: 12px; padding: 0 6px; }
+.board-age { align-self: flex-start; }

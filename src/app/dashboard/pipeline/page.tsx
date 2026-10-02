@@ -16,7 +16,7 @@ export default async function ClientPipelinePage({ searchParams }: { searchParam
   return (
     <AppShell user={user} client={client} active="dashboard">
       <div className="stack">
-        <ClientHeader client={client} subtitle="Prospects and results from Monday.com" />
+        <ClientHeader client={client} subtitle="Pending business and past prospects" />
         <ClientTabs base="/dashboard" active="pipeline" />
         <PipelineView client={client} basePath="/dashboard/pipeline" search={await searchParams} />
       </div>

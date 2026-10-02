@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { applyCaseEmail, looksLikeCase, parseCaseEmail } from "@/lib/caseEmail";
 import { clearMetricsCache } from "@/lib/metrics";
 import { entriesFromCsv, matchAgent, mergeImport, normaliseStatus, parseDate, parsePeriod, withProduction } from "@/lib/production";
+import { stagesFor } from "@/lib/stages";
 import { getClient, newId } from "@/lib/store";
 import type { CaseStatus, ProductionEntry } from "@/lib/types";
 
@@ -60,6 +61,8 @@ export async function addCase(form: FormData) {
     paidDate: status === "Paid" || status === "Chargeback" ? parseDate(str(form, "paidDate")) ?? date : undefined,
     source: str(form, "source") || undefined,
     notes: str(form, "notes") || undefined,
+    stage: status === "Submitted" ? (stagesFor(client).includes(str(form, "stage")) ? str(form, "stage") : stagesFor(client)[0]) : undefined,
+    stageAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     createdBy: user.name,
   };
@@ -179,4 +182,20 @@ export async function importCaseEmail(form: FormData) {
       ? `That email was already imported for ${what}.`
       : `${action === "created" ? "Added" : "Updated"} ${what} for ${entry.agentName}: ${entry.carrierStatus ?? entry.status}.`,
   );
+}
+
+/** Moves a pending case to another stage on the pipeline board (also records who moved it). */
+export async function setCaseStage(clientId: string, id: string, stage: string) {
+  const { user, client } = await access(clientId);
+  if (!stagesFor(client).includes(stage)) throw new Error("Unknown stage");
+  await withProduction(client, (entries) => {
+    const e = entries.find((x) => x.id === id && x.kind === "case");
+    if (!e || e.stage === stage) return;
+    const at = new Date().toISOString();
+    e.stage = stage;
+    e.stageAt = at;
+    e.updatedAt = at;
+    e.updates = [...(e.updates ?? []), { at, status: `Moved to ${stage}`, from: user.name, ref: `stage-${at}` }];
+  });
+  revalidatePath("/", "layout");
 }

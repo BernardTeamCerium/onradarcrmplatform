@@ -324,6 +324,18 @@ export function exportCsv(entries: ProductionEntry[]) {
 // Sibley sample: their reported yearly totals spread across agents and months (agent split is fictional),
 // plus a few individual cases this month to show day-to-day logging.
 
+// Pending sample cases on the pipeline board (fictional clients): date, client, product, carrier, premium, stage, days in stage.
+const SAMPLE_PENDING: [string, string, string, string, number, string, number][] = [
+  ["2026-09-08", "Harold Benton", "Fixed indexed annuity", "Sample Carrier A", 315_000, "Transfer Out", 18],
+  ["2026-09-12", "Joyce Whitfield", "MYGA", "Sample Carrier B", 140_000, "Funds En Route", 3],
+  ["2026-09-15", "Walter Ames", "Fixed indexed annuity", "Sample Carrier A", 520_000, "Awaiting Transfer", 6],
+  ["2026-09-18", "Gloria Pratt", "Fixed indexed annuity", "Sample Carrier C", 96_000, "Transfer Out NIGO", 9],
+  ["2026-09-22", "Dennis Shaw", "Indexed universal life", "Sample Carrier C", 30_000, "Needs Attention", 4],
+  ["2026-09-24", "Frances Kemp", "Fixed indexed annuity", "Sample Carrier A", 260_000, "AOF", 5],
+  ["2026-09-29", "Raymond Cole", "MYGA", "Sample Carrier B", 210_000, "In Review", 2],
+];
+const SEPT_SAMPLE_CASES = SAMPLE_PENDING.filter(([d]) => d.startsWith("2026-09")).reduce((a, c) => a + c[4], 0);
+
 function sibleySample(client: Client): ProductionEntry[] {
   const now = new Date().toISOString();
   const agents = client.agents.length ? client.agents : [{ id: "ag_troy", name: "Troy Sibley" }];
@@ -332,7 +344,7 @@ function sibleySample(client: Client): ProductionEntry[] {
   const years: { year: number; months: number; submitted: number; paid: number; chargebacks: number; fixed?: Record<number, number> }[] = [
     { year: 2024, months: 12, submitted: 29_000_000, paid: 22_000_000, chargebacks: 2_000_000 },
     { year: 2025, months: 12, submitted: 44_000_000, paid: 32_000_000, chargebacks: 5_000_000 },
-    { year: 2026, months: 9, submitted: 32_000_000, paid: 20_000_000, chargebacks: 3_000_000, fixed: { 9: 5_600_000 } },
+    { year: 2026, months: 9, submitted: 32_000_000, paid: 20_000_000, chargebacks: 3_000_000, fixed: { 9: 5_600_000 - SEPT_SAMPLE_CASES } },
   ];
   // Split `total` into whole-thousand parts proportional to weights, summing exactly to total.
   const split = (total: number, w: number[]) => {
@@ -374,10 +386,20 @@ function sibleySample(client: Client): ProductionEntry[] {
     ["2026-10-02", "Margaret Doucet", "Fixed indexed annuity", "Sample Carrier A", 310_000, "Submitted"],
     ["2026-10-02", "James Coleman", "Indexed universal life", "Sample Carrier C", 24_000, "Submitted"],
   ];
+  const newStages = ["In Review", "Submitted", "Submitted", "Suit Req"];
   cases.forEach(([date, name, product, carrier, premium, status], i) => {
     const a = agents[i % agents.length];
     out.push({
       id: newId("pr"), kind: "case", date, clientName: name, product, carrier, premium, status, agentName: a.name, agentId: a.id,
+      stage: newStages[i], stageAt: `${date}T15:00:00.000Z`,
+      createdAt: now, createdBy: "Sample data", sample: true,
+    });
+  });
+  SAMPLE_PENDING.forEach(([date, name, product, carrier, premium, stage, days], i) => {
+    const a = agents[(i + 1) % agents.length];
+    out.push({
+      id: newId("pr"), kind: "case", date, clientName: name, product, carrier, premium, status: "Submitted", agentName: a.name, agentId: a.id,
+      stage, stageAt: new Date(Date.now() - days * 86_400_000).toISOString(),
       createdAt: now, createdBy: "Sample data", sample: true,
     });
   });

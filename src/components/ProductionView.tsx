@@ -2,6 +2,7 @@ import Link from "next/link";
 import { addCase, addTotal, clearSampleProduction, importCaseEmail, importProduction } from "@/app/actions/production";
 import { count, money, moneyShort, percent } from "@/lib/format";
 import { loadProduction, productionYears, totalsByAgent, totalsByYear } from "@/lib/production";
+import { stagesFor } from "@/lib/stages";
 import { CASE_STATUSES, PRODUCTS, type Client } from "@/lib/types";
 import { CaseTable, TotalsTable } from "./CaseTable";
 
@@ -152,6 +153,11 @@ export async function ProductionView({
             <label className="field">
               Status
               <select name="status" defaultValue="Submitted">{CASE_STATUSES.map((s) => <option key={s}>{s}</option>)}</select>
+            </label>
+            <label className="field">
+              Pipeline stage
+              <select name="stage" defaultValue={stagesFor(client)[0]}>{stagesFor(client).map((s) => <option key={s}>{s}</option>)}</select>
+              <span className="hint">Where a pending case sits on the Pipeline board</span>
             </label>
             <label className="field">
               Lead source
