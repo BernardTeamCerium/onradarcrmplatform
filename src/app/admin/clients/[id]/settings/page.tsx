@@ -452,7 +452,10 @@ export default async function ClientSettings({
               In Gmail, create a filter for the vendor&apos;s emails (for example <i>from:leads@vendor.com</i>) with <b>Apply the label</b> → <b>OnRadar Leads</b>.
               You can also add that label to any email by hand.
             </li>
-            <li>Every 5 minutes, labelled emails are sent here and moved to <b>OnRadar Leads/Imported</b>.</li>
+            <li>
+              Every 5 minutes, labelled emails are sent here and relabelled <b>OnRadar Leads/Imported</b>. Emails stay in the inbox: the script
+              never archives, deletes or marks anything read. In the filter, leave <b>Skip the Inbox</b> unticked.
+            </li>
           </ol>
           <label className="field">
             Gmail script for {client.name}
@@ -515,7 +518,7 @@ export default async function ClientSettings({
               In Gmail, create a filter that matches the status emails, for example <i>from:(@retireaef.com) subject:(&quot;Status Update&quot;)</i>, with{" "}
               <b>Apply the label</b> → <b>OnRadar Production</b>. Tick <b>Also apply filter to matching conversations</b> to bring in past emails too.
             </li>
-            <li>Every 5 minutes, labelled emails are sent here and moved to <b>OnRadar Production/Imported</b>.</li>
+            <li>Every 5 minutes, labelled emails are sent here and relabelled <b>OnRadar Production/Imported</b>. They stay in the inbox, unread or read as they were.</li>
           </ol>
           <label className="field">
             Gmail script for {client.name}

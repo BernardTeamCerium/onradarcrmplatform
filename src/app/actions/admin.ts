@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
+import { fetchIcs, googleAddressProblem } from "@/lib/ics";
 import { withBooked } from "@/lib/appointments";
 import { removeSampleLeads } from "@/lib/leads";
 import { clearMetricsCache } from "@/lib/metrics";
@@ -278,6 +279,10 @@ export async function saveAgents(form: FormData) {
   if (ics.some((u) => u && !/^https:\/\/[^\s]+$/i.test(u))) {
     redirect(settingsPath(id, "Google Calendar addresses must start with https:// (use the secret address in iCal format).") + "#agents");
   }
+  for (let i = 0; i < ics.length; i++) {
+    const problem = ics[i] ? googleAddressProblem(ics[i]) : null;
+    if (problem) redirect(settingsPath(id, `${names[i] || "Agent"}: ${problem}`) + "#agents");
+  }
   const tz = str(form, "timeZone");
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
@@ -291,7 +296,20 @@ export async function saveAgents(form: FormData) {
     c.timeZone = tz || c.timeZone;
     c.calendarSamples = form.get("calendarSamples") === "on";
   });
-  redirect(settingsPath(id, "Agents saved.") + "#agents");
+  // Try each calendar now so a wrong address shows up here, not later on the Calendar tab.
+  const zone = (await getClient(id))?.timeZone ?? "America/Chicago";
+  const checks = await Promise.all(
+    names.map(async (name, i) => {
+      if (!name || !ics[i]) return null;
+      try {
+        const events = await fetchIcs(ics[i], zone, true);
+        return `${name}'s Google Calendar is connected (${events.length} event${events.length === 1 ? "" : "s"} found).`;
+      } catch (err) {
+        return `${name}'s Google Calendar couldn't be read: ${(err as Error).message}.`;
+      }
+    }),
+  );
+  redirect(settingsPath(id, ["Agents saved.", ...checks.filter(Boolean)].join(" ")) + "#agents");
 }
 
 /**

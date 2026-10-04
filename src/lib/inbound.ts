@@ -122,6 +122,9 @@ export function gmailScript(endpoint: string, label = "OnRadar Leads", what = "l
  * 1. Paste this into a new project at https://script.google.com and save.
  * 2. Run "setup" once and approve access. It creates the Gmail labels and a 5-minute timer.
  * 3. In Gmail, add the label "${label}" to ${what} (or create a filter that does it).
+ *    Leave "Skip the Inbox" unticked in the filter so emails stay in the inbox.
+ * Safe for the mailbox: it only reads labelled emails and swaps "${label}" for "${label}/Imported".
+ * It never archives, deletes, moves or marks emails as read.
  */
 const ENDPOINT = ${JSON.stringify(endpoint)};
 const LABEL = ${JSON.stringify(label)};

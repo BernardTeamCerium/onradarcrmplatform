@@ -79,15 +79,47 @@ export function parseIcs(text: string, fallbackTz: string): IcsEvent[] {
 
 const cache = new Map<string, { at: number; events: IcsEvent[] }>();
 
+const isGoogle = (u: URL) => /(^|\.)google\.com$/i.test(u.hostname);
+
+/** Catches the usual wrong Google links before they're saved. Returns a problem to show, or null. */
+export function googleAddressProblem(url: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(url.replace(/^webcal:/i, "https:"));
+  } catch {
+    return "That isn't a web address. Copy the Secret address in iCal format from Google Calendar settings.";
+  }
+  if (!isGoogle(u)) return null; // other calendar apps (Outlook, iCloud, Calendly) publish .ics feeds too
+  if (!u.pathname.includes("/ical/")) {
+    return "That's a link to the calendar page, not its feed. In Google Calendar settings → Integrate calendar, copy “Secret address in iCal format” (it ends in basic.ics).";
+  }
+  if (u.pathname.includes("/public/")) {
+    return "That's the public address, which only works when the calendar is shared publicly. Copy “Secret address in iCal format” instead (it contains /private-…/basic.ics).";
+  }
+  return null;
+}
+
+/** Plain-English reason for a failed feed. */
+function feedError(status: number, u: URL) {
+  if (isGoogle(u) && (status === 404 || status === 401 || status === 403)) {
+    return u.pathname.includes("/public/")
+      ? "Google doesn't share this calendar publicly. Use the Secret address in iCal format instead"
+      : "Google says this address doesn't exist. Copy the Secret address in iCal format again (it changes if it was reset), and if there's no secret address, the Google Workspace admin has turned off external calendar sharing";
+  }
+  return `Calendar feed returned ${status}`;
+}
+
 /** Fetches an agent's Google Calendar feed (cached for 5 minutes). */
-export async function fetchIcs(url: string, fallbackTz: string): Promise<IcsEvent[]> {
+export async function fetchIcs(url: string, fallbackTz: string, fresh = false): Promise<IcsEvent[]> {
   const hit = cache.get(url);
-  if (hit && Date.now() - hit.at < 5 * 60_000) return hit.events;
+  if (!fresh && hit && Date.now() - hit.at < 5 * 60_000) return hit.events;
   const u = new URL(url.replace(/^webcal:/i, "https:"));
   if (u.protocol !== "https:") throw new Error("Calendar address must start with https://");
   const res = await fetch(u, { cache: "no-store", headers: { Accept: "text/calendar" } });
-  if (!res.ok) throw new Error(`Calendar feed returned ${res.status}`);
-  const events = parseIcs(await res.text(), fallbackTz);
+  if (!res.ok) throw new Error(feedError(res.status, u));
+  const text = await res.text();
+  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error("That address opened a web page, not a calendar feed. Use the Secret address in iCal format");
+  const events = parseIcs(text, fallbackTz);
   cache.set(url, { at: Date.now(), events });
   return events;
 }

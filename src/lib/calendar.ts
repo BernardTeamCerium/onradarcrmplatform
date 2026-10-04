@@ -336,7 +336,7 @@ async function googleAppts(client: Client, dates: string[], today: { date: strin
             );
           }
         } catch (err) {
-          warnings.push(`Couldn't read ${agent.name}'s Google Calendar (${(err as Error).message}). Check the calendar address in settings.`);
+          warnings.push(`Couldn't read ${agent.name}'s Google Calendar: ${(err as Error).message}. Update it in Settings → Agents & calendar.`);
         }
       }),
   );
