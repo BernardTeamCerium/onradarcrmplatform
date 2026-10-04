@@ -60,8 +60,25 @@ export async function CalendarView({
     .map((a) => ({ agent: a, appts: dayAppts.filter((x) => x.agentId === a.id) }))
     .filter((g) => g.appts.length > 0 || !agentId || g.agent.id === agentId);
 
+  const admin = basePath.startsWith("/admin");
+  const connected = client.agents.filter((a) => a.googleIcsUrl).length;
+
   return (
     <div className="stack">
+      {connected === 0 && (
+        <p className="notice">
+          No Google Calendars connected yet.{" "}
+          {admin ? (
+            <>
+              Add each agent&apos;s Google Calendar in{" "}
+              <Link href={`/admin/clients/${client.id}/settings#agents`}><b>Settings → Agents &amp; calendar</b></Link>
+              {client.demoMode && client.calendarSamples !== false ? " (and untick Show sample appointments)" : ""}.
+            </>
+          ) : (
+            "Your OnRadar account manager connects each agent's Google Calendar so appointments show here automatically."
+          )}
+        </p>
+      )}
       {/* Today preview */}
       <section className="engine-live" aria-label="Today">
         <div className="engine-live-head">
