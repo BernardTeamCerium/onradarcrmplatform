@@ -39,6 +39,14 @@ The **Calendar** tab shows appointments by agent. At the top is today's preview:
 - **Agents and the calendar time zone** are set in Admin → client → **Settings → Agents & calendar**. Sibley's two extra agents are fictional placeholders.
 - **With the CRM connected**, appointments come from the CRM calendars grouped by assigned user (needs `users.readonly`). Quiz details are linked when the prospect's email or phone matches a Typeform lead.
 
+
+**No secret address?** Google Workspace accounts often hide the secret iCal address. Use the **calendar sync script** instead: **Settings → Agents & calendar → Calendar sync script**, one script per agent.
+
+- The agent (or an assistant their calendar is shared with) pastes it into script.google.com and runs **setup**.
+- It reads their calendar every 15 minutes and posts the events to `/api/calendar/<clientId>/push?key=…&agent=…`. It's read-only, so it never changes the calendar.
+- You can limit it to events whose title contains a word (e.g. "appt").
+- Settings shows each agent's last sync. Events from both sources are merged without duplicates.
+
 ## Marketing
 
 *(Marketing and Geo are admin-only; client logins don't see them.)* The **Marketing** tab breaks each date range down by source (TV, Radio, Facebook, TikTok, YouTube and Lead Seller #1 by default). For each source it shows marketing spend, leads, cost per lead, conversations, contact rate (conversations ÷ leads), appointments set, connected appointments, connected rate, cost per connected appointment, applications and sales conversion. It also highlights the best source on each measure and has a chart that ranks the sources by whichever measure you pick. The rows add up to the Dashboard totals.

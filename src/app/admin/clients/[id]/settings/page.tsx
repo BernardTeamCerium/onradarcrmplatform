@@ -5,6 +5,8 @@ import { ClientHeader } from "@/components/ClientHeader";
 import { ClientTabs } from "@/components/ClientTabs";
 import { importEmailLead, importTypeformResponses, regenerateInboundKey, regenerateTypeformSecret } from "@/app/actions/leads";
 import { gmailScript } from "@/lib/inbound";
+import { calendarSyncScript, loadPushed } from "@/lib/calendarPush";
+import { CopyButton } from "@/components/CopyButton";
 import { headers } from "next/headers";
 import {
   addSpend,
@@ -65,6 +67,8 @@ export default async function ClientSettings({
   const webhookUrl = `${origin}/api/webhooks/typeform/${id}`;
   const emailUrl = `${origin}/api/leads/${id}/email?key=${client.inboundKey}`;
   const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
+  const pushedByAgent = new Map(await Promise.all(client.agents.map(async (a) => [a.id, await loadPushed(id, a.id)] as const)));
+  const calendarPushUrl = (agentId: string) => `${origin}/api/calendar/${id}/push?key=${client.inboundKey}&agent=${encodeURIComponent(agentId)}`;
   const productionEmailUrl = `${origin}/api/production/${id}/email?key=${client.inboundKey}`;
   const monday = client.monday;
   const mondaySnap = monday ? await loadSnapshot(id) : null;
@@ -101,6 +105,15 @@ export default async function ClientSettings({
         <ClientHeader client={client} subtitle="Client settings" />
         <ClientTabs base={`/admin/clients/${id}`} active="settings" admin />
         {msg && <p className="flash" role="status">{msg}</p>}
+        <nav className="chips" aria-label="Jump to a setting">
+          {[
+            ["go-live", "Go live"], ["crm", "CRM"], ["agents", "Agents & calendar"], ["calendar-sync", "Calendar sync script"],
+            ["typeform", "Typeform"], ["email-leads", "Gmail: leads"], ["production-email", "Gmail: production"], ["stages", "Pipeline stages"],
+            ["monday", "Monday.com"], ["yearly", "Yearly results"], ["sources", "Sources"], ["spend", "Spend"], ["logins", "Logins"],
+          ].map(([anchor, label]) => (
+            <a key={anchor} className="chip" href={`#${anchor}`}>{label}</a>
+          ))}
+        </nav>
 
         {/* Go live */}
         <section className="card" id="go-live">
@@ -141,7 +154,7 @@ export default async function ClientSettings({
         </section>
 
         {/* Profile */}
-        <section className="card">
+        <section className="card" id="profile">
           <div className="card-head"><h2>Profile &amp; branding</h2></div>
           <form action={updateProfile} className="stack" style={{ gap: 16 }}>
             <input type="hidden" name="clientId" value={id} />
@@ -178,7 +191,7 @@ export default async function ClientSettings({
         </section>
 
         {/* CRM connection */}
-        <section className="card">
+        <section className="card" id="crm">
           <div className="card-head">
             <div>
               <h2>CRM connection</h2>
@@ -272,6 +285,46 @@ export default async function ClientSettings({
             </label>
             <div className="form-actions"><button className="btn primary" type="submit">Save agents</button></div>
           </form>
+
+          <div id="calendar-sync" style={{ marginTop: 22, scrollMarginTop: 16 }}>
+            <h3 style={{ marginBottom: 6 }}>No secret address? Use the calendar sync script</h3>
+            <p className="small secondary" style={{ margin: "0 0 10px" }}>
+              Google Workspace accounts often hide the secret address. Instead, the agent runs this small script in their own Google account. It
+              reads their calendar every 15 minutes and sends the appointments here. It&apos;s read-only and never changes the calendar. Each agent
+              has their own script; save new agents above first.
+            </p>
+            <ol className="small secondary" style={{ margin: "0 0 12px", paddingLeft: 18, display: "grid", gap: 4 }}>
+              <li>Signed in as the agent (or an assistant their calendar is shared with), open <b>script.google.com</b> → <b>New project</b>.</li>
+              <li>Delete what&apos;s there, paste the agent&apos;s script and click <b>Save</b>.</li>
+              <li>Choose <b>setup</b> in the function menu and click <b>Run</b>. Approve the permissions (Google may say the app isn&apos;t verified: click <b>Advanced</b> → <b>Go to project</b>).</li>
+              <li>Refresh this page: the agent shows &ldquo;Last sync&rdquo; with the number of events.</li>
+            </ol>
+            {client.agents.length === 0 && <p className="muted small">Add an agent above first.</p>}
+            <div className="stack" style={{ gap: 8 }}>
+              {client.agents.map((ag) => {
+                const pushed = pushedByAgent.get(ag.id);
+                const script = calendarSyncScript(calendarPushUrl(ag.id), ag.name);
+                return (
+                  <details key={ag.id} className="card" style={{ padding: "10px 14px", boxShadow: "none" }}>
+                    <summary style={{ cursor: "pointer" }}>
+                      <b>{ag.name}</b>{" "}
+                      <span className="muted small">
+                        {pushed
+                          ? `· Last sync ${new Date(pushed.receivedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: client.timeZone })} · ${pushed.events.length} events${pushed.calendar ? ` from “${pushed.calendar}”` : ""}`
+                          : "· Not synced yet"}
+                      </span>
+                    </summary>
+                    <label className="field" style={{ marginTop: 10 }}>
+                      Calendar sync script for {ag.name}
+                      <textarea readOnly rows={8} value={script} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+                      <span className="hint">Contains this client&apos;s private key, so only share it with the agent.</span>
+                    </label>
+                    <div style={{ marginTop: 8 }}><CopyButton text={script} /></div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         {/* Marketing sources */}
@@ -305,7 +358,7 @@ export default async function ClientSettings({
         </section>
 
         {/* Marketing spend */}
-        <section className="card">
+        <section className="card" id="spend">
           <div className="card-head">
             <div>
               <h2>Marketing spend</h2>
@@ -460,6 +513,7 @@ export default async function ClientSettings({
           <label className="field">
             Gmail script for {client.name}
             <textarea readOnly rows={10} value={gmailScript(emailUrl)} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+            <span><CopyButton text={gmailScript(emailUrl)} /></span>
             <span className="hint">The script contains this client&apos;s private key, so only paste it into your own Google account.</span>
           </label>
           <details style={{ marginTop: 12 }}>
@@ -523,6 +577,7 @@ export default async function ClientSettings({
           <label className="field">
             Gmail script for {client.name}
             <textarea readOnly rows={10} value={gmailScript(productionEmailUrl, "OnRadar Production", "case status emails", "Production tab")} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+            <span><CopyButton text={gmailScript(productionEmailUrl, "OnRadar Production", "case status emails", "Production tab")} /></span>
             <span className="hint">The script contains this client&apos;s private key, so only paste it into your own Google account. Anyone can also paste a single email on the Production tab.</span>
           </label>
           <details style={{ marginTop: 12 }}>
@@ -704,7 +759,7 @@ export default async function ClientSettings({
         </section>
 
         {/* Monthly figures */}
-        <section className="card">
+        <section className="card" id="figures">
           <div className="card-head">
             <div>
               <h2>Monthly figures</h2>
@@ -747,7 +802,7 @@ export default async function ClientSettings({
         </section>
 
         {/* Users */}
-        <section className="card">
+        <section className="card" id="logins">
           <div className="card-head">
             <div>
               <h2>Client logins</h2>

@@ -1,5 +1,6 @@
 import "server-only";
 import * as ghl from "./ghl";
+import { loadPushed, pushedEvents } from "./calendarPush";
 import { cleanPlace, samplePlace } from "./geo";
 import { leadFromTypeform, listLeads, sampleTypeformPayload } from "./leads";
 import { demoRows, hash, rng, usesLiveData } from "./metrics";
@@ -304,11 +305,22 @@ function leadForEvent(leads: Lead[], text: string) {
 async function googleAppts(client: Client, dates: string[], today: { date: string; minutes: number }, leads: Lead[], warnings: string[]) {
   const out: CalendarAppt[] = [];
   await Promise.all(
-    client.agents
-      .filter((a) => a.googleIcsUrl)
-      .map(async (agent) => {
+    client.agents.map(async (agent) => {
+        // Events come from the secret iCal address, the Apps Script calendar sync, or both (same event counted once).
+        const pushed = await loadPushed(client.id, agent.id);
+        if (!agent.googleIcsUrl && !pushed) return;
         try {
-          const events = await fetchIcs(agent.googleIcsUrl!, client.timeZone);
+          let fromIcs: Awaited<ReturnType<typeof fetchIcs>> = [];
+          if (agent.googleIcsUrl) {
+            try {
+              fromIcs = await fetchIcs(agent.googleIcsUrl, client.timeZone);
+            } catch (err) {
+              if (!pushed) throw err;
+              warnings.push(`${agent.name}'s calendar address couldn't be read (${(err as Error).message}), so the calendar sync script's copy is shown.`);
+            }
+          }
+          const seen = new Set(fromIcs.map((e) => `${e.summary}|${e.start.toISOString()}`));
+          const events = [...fromIcs, ...(pushed ? pushedEvents(pushed).filter((e) => !seen.has(`${e.summary}|${e.start.toISOString()}`)) : [])];
           for (const ev of events) {
             if (ev.allDay) continue; // all-day items are blocks / reminders, not appointments
             const local = nowIn(client.timeZone, ev.start);
@@ -372,7 +384,7 @@ export async function getCalendarWeek(client: Client, start: string): Promise<Ca
   const booked = (await listBooked(client.id)).filter((b) => dates.includes(b.date)).map((b) => bookedToAppt(client, b, leads));
   if (booked.length) parts.push("Booked from Leads");
   const google = await googleAppts(client, dates, today, leads, warnings);
-  if (client.agents.some((a) => a.googleIcsUrl)) parts.push("Google Calendar");
+  if (client.agents.some((a) => a.googleIcsUrl) || google.length) parts.push("Google Calendar");
 
   const all = [...base, ...booked, ...google];
   return {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { addDays, getCalendarWeek, nowIn, weekStart } from "@/lib/calendar";
 import { count, money, moneyShort } from "@/lib/format";
+import { loadPushed } from "@/lib/calendarPush";
 import type { ApptStatus, CalendarAppt, Client } from "@/lib/types";
 
 const STATUS_TONE: Record<ApptStatus, string> = {
@@ -61,7 +62,8 @@ export async function CalendarView({
     .filter((g) => g.appts.length > 0 || !agentId || g.agent.id === agentId);
 
   const admin = basePath.startsWith("/admin");
-  const connected = client.agents.filter((a) => a.googleIcsUrl).length;
+  const pushed = await Promise.all(client.agents.map((a) => loadPushed(client.id, a.id)));
+  const connected = client.agents.filter((a, i) => a.googleIcsUrl || pushed[i]).length;
 
   return (
     <div className="stack">
@@ -70,7 +72,7 @@ export async function CalendarView({
           No Google Calendars connected yet.{" "}
           {admin ? (
             <>
-              Add each agent&apos;s Google Calendar in{" "}
+              Add each agent&apos;s Google Calendar (secret address or calendar sync script) in{" "}
               <Link href={`/admin/clients/${client.id}/settings#agents`}><b>Settings → Agents &amp; calendar</b></Link>
               {client.demoMode && client.calendarSamples !== false ? " (and untick Show sample appointments)" : ""}.
             </>
