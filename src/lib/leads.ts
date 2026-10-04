@@ -34,10 +34,26 @@ export async function listLeads(clientId: string) {
   return (await loadLeads(clientId)).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
 }
 
-export async function addLead(clientId: string, lead: Omit<Lead, "id" | "status" | "statusUpdatedAt">) {
+/**
+ * Adds a lead. A repeat of the same externalId is ignored, or with `refresh` (an email sent again) re-reads the
+ * lead's details while keeping its status, notes and history.
+ */
+export async function addLead(clientId: string, lead: Omit<Lead, "id" | "status" | "statusUpdatedAt">, opts: { refresh?: boolean } = {}) {
   return withLeads(clientId, (leads) => {
     if (lead.externalId) {
       const dupe = leads.find((l) => l.externalId === lead.externalId);
+      if (dupe && opts.refresh) {
+        Object.assign(dupe, {
+          name: lead.name,
+          email: lead.email ?? dupe.email,
+          phone: lead.phone ?? dupe.phone,
+          city: lead.city ?? dupe.city,
+          state: lead.state ?? dupe.state,
+          source: lead.source,
+          answers: lead.answers,
+        });
+        return dupe;
+      }
       if (dupe) return dupe;
     }
     const now = new Date().toISOString();

@@ -32,6 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ clientI
   if (!lead.email && !lead.phone && lead.name === "Unknown Lead") {
     return Response.json({ ok: true, ignored: "No name, email or phone found in this email" });
   }
-  const saved = await addLead(clientId, lead);
+  // The same email sent again (e.g. re-labelled in Gmail) refreshes the lead with the latest reading.
+  const saved = await addLead(clientId, lead, { refresh: true });
   return Response.json({ ok: true, leadId: saved.id, name: saved.name });
 }
