@@ -91,6 +91,27 @@ export async function setLeadStatus(clientId: string, leadId: string, status: Le
   });
 }
 
+export type LeadScope = "all" | "email" | "typeform" | "api" | "sample";
+
+/** Which leads a bulk delete touches: by how they arrived, optionally only those received on or before a date. */
+export function leadMatches(l: Lead, scope: LeadScope, before?: string) {
+  if (before && l.receivedAt.slice(0, 10) > before) return false;
+  if (scope === "all") return true;
+  if (scope === "sample") return isSampleLead(l);
+  return (l.channel ?? "typeform") === scope;
+}
+
+/** Deletes every matching lead; returns the deleted lead ids. */
+export async function deleteLeads(clientId: string, scope: LeadScope, before?: string) {
+  return withLeads(clientId, (leads) => {
+    const removed: string[] = [];
+    for (let i = leads.length - 1; i >= 0; i--) {
+      if (leadMatches(leads[i], scope, before)) removed.push(...leads.splice(i, 1).map((l) => l.id));
+    }
+    return removed;
+  });
+}
+
 export async function deleteLead(clientId: string, leadId: string) {
   return withLeads(clientId, (leads) => {
     const i = leads.findIndex((l) => l.id === leadId);

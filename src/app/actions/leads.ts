@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { leadFromEmail } from "@/lib/inbound";
 import { formIdFrom, importTypeform } from "@/lib/typeform";
-import { addLead, deleteLead, leadFromTypeform, sampleTypeformPayload, setLeadStatus } from "@/lib/leads";
+import { addLead, deleteLead, deleteLeads, leadFromTypeform, sampleTypeformPayload, setLeadStatus, type LeadScope } from "@/lib/leads";
 import { withBooked } from "@/lib/appointments";
 import { getClient, newId, randomSecret, updateDb } from "@/lib/store";
 import { LEAD_STATUSES, type ApptStatus, type BookedAppt, type Lead, type LeadStatus } from "@/lib/types";
@@ -154,4 +154,26 @@ export async function importTypeformResponses(form: FormData) {
   });
   revalidatePath("/", "layout");
   redirect(back(msg));
+}
+
+const SCOPES: LeadScope[] = ["all", "email", "typeform", "api", "sample"];
+
+/** Bulk delete from the admin Leads page (also removes bookings made for those leads). */
+export async function bulkDeleteLeads(form: FormData) {
+  await requireAdmin();
+  const id = String(form.get("clientId") ?? "");
+  const back = (msg: string) => `/admin/clients/${id}/leads?msg=${encodeURIComponent(msg)}`;
+  const scope = String(form.get("scope") ?? "") as LeadScope;
+  const before = String(form.get("before") ?? "").trim() || undefined;
+  if (!SCOPES.includes(scope)) redirect(back("Choose which leads to delete."));
+  if (before && !/^\d{4}-\d{2}-\d{2}$/.test(before)) redirect(back("Pick a valid date."));
+  if (String(form.get("confirm") ?? "").trim().toUpperCase() !== "DELETE") redirect(back("Type DELETE to confirm."));
+  const removed = new Set(await deleteLeads(id, scope, before));
+  const bookings = await withBooked(id, (list) => {
+    const n = list.length;
+    for (let i = list.length - 1; i >= 0; i--) if (removed.has(list[i].leadId)) list.splice(i, 1);
+    return n - list.length;
+  });
+  revalidatePath("/", "layout");
+  redirect(back(`Deleted ${removed.size} lead${removed.size === 1 ? "" : "s"}${bookings ? ` and ${bookings} booking${bookings === 1 ? "" : "s"}` : ""}.`));
 }
