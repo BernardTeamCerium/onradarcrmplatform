@@ -19,6 +19,33 @@ A branded, login-protected dashboard that pulls each client's numbers from **GoH
 
 Every metric is compared with the previous period of the same length. Date ranges: last 7 / 30 / 90 days, month to date, last month and year to date.
 
+## Reporting sheet (Google Sheets) → Overview, Reports, Trends
+
+Keep the numbers in one Google Sheet. Use one row per month (or per day), with any of these columns:
+
+> Marketing Spend, Leads, Conversations, Appts Set, Connected Appts, Applications, Sales, Submitted Premium, Paid Premium, Chargebacks
+
+Optional **Agent** and **Source** columns break the numbers down. Common header variations work, e.g. "Apps Submitted", "Held" or "Premium".
+
+**Setup:** go to **Settings → Reporting sheet**.
+- Download the template (or use an existing sheet) and paste the script into the sheet's **Extensions → Apps Script**. Then run **setup**.
+- Every edit is sent to `/api/reports/<clientId>/sheet` within about a minute, with a 15-minute backup. The script only reads the sheet.
+
+**How the numbers are used:**
+- For each column the sheet has, its numbers are the source of truth on the **Overview**, the new **Reports** page and **Trends**. Everything else still comes from the CRM and OnRadar.
+- Month rows are spread across their days, so every date range works. The current month counts as month to date.
+- Rows whose Month cell is "Total" are ignored. Rows without a readable month are listed in Settings.
+
+**Reports** is the deep dive:
+- Year, agent and source filters, and totals.
+- A month chart for any metric.
+- A month-by-month table with cost per lead, cost per appointment, connect rate, close rate, placement and return.
+- By-agent and by-source tables.
+
+In sample mode with no sheet, it shows the sample numbers.
+
+**Client view:** **Settings → What the client sees** hides tabs from the client's logins. Overview always shows, and admins see everything.
+
 ## Two dashboards
 
 - **Admin** (`/admin`): every client in one table with rolled-up totals. From there an admin can open any client's dashboard (exactly what the client sees), manage their logo and brand color, connect GoHighLevel, enter marketing spend, and create client logins.

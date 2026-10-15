@@ -15,6 +15,8 @@ import {
   deleteYear,
   deleteClient,
   goLive,
+  saveClientTabs,
+  disconnectSheet,
   savePipelineStages,
   deleteSpend,
   deleteUser,
@@ -36,6 +38,8 @@ import { isSampleLead, listLeads } from "@/lib/leads";
 import { connectMonday, disconnectMonday, saveMondayMapping } from "@/app/actions/monday";
 import { loadSnapshot } from "@/lib/monday";
 import { stagesFor, STUCK_DAYS } from "@/lib/stages";
+import { loadSheet, METRIC_LABEL, sheetScript } from "@/lib/sheet";
+import { HIDEABLE_TABS } from "@/lib/tabs";
 import { loadProduction } from "@/lib/production";
 import type { YearRecord } from "@/lib/types";
 
@@ -69,6 +73,8 @@ export default async function ClientSettings({
   const inboundUrl = `${origin}/api/leads/${id}/inbound?key=${client.inboundKey}`;
   const pushedByAgent = new Map(await Promise.all(client.agents.map(async (a) => [a.id, await loadPushed(id, a.id)] as const)));
   const calendarPushUrl = (agentId: string) => `${origin}/api/calendar/${id}/push?key=${client.inboundKey}&agent=${encodeURIComponent(agentId)}`;
+  const sheet = await loadSheet(id);
+  const sheetUrl = `${origin}/api/reports/${id}/sheet?key=${client.inboundKey}`;
   const productionEmailUrl = `${origin}/api/production/${id}/email?key=${client.inboundKey}`;
   const monday = client.monday;
   const mondaySnap = monday ? await loadSnapshot(id) : null;
@@ -107,7 +113,7 @@ export default async function ClientSettings({
         {msg && <p className="flash" role="status">{msg}</p>}
         <nav className="chips" aria-label="Jump to a setting">
           {[
-            ["go-live", "Go live"], ["crm", "CRM"], ["agents", "Agents & calendar"], ["calendar-sync", "Calendar sync script"],
+            ["go-live", "Go live"], ["sheet", "Reporting sheet"], ["client-view", "Client view"], ["crm", "CRM"], ["agents", "Agents & calendar"], ["calendar-sync", "Calendar sync script"],
             ["typeform", "Typeform"], ["email-leads", "Gmail: leads"], ["production-email", "Gmail: production"], ["stages", "Pipeline stages"],
             ["monday", "Monday.com"], ["yearly", "Yearly results"], ["sources", "Sources"], ["spend", "Spend"], ["logins", "Logins"],
           ].map(([anchor, label]) => (
@@ -153,6 +159,85 @@ export default async function ClientSettings({
           )}
         </section>
 
+        {/* Reporting sheet */}
+        <section className="card" id="sheet">
+          <div className="card-head">
+            <div>
+              <h2>Reporting sheet (Google Sheets)</h2>
+              <p className="muted small">
+                Keep the numbers in one Google Sheet: one row per month (or day), with columns like Marketing Spend, Leads, Appts Set,
+                Connected Appts, Applications, Submitted Premium and Paid Premium. Add Agent and Source columns to break the numbers down. Every
+                edit shows on the <b>Overview</b>, <b>Reports</b> and <b>Trends</b> within about a minute. For each column the sheet has, the
+                sheet&apos;s numbers are used; everything else still comes from the CRM and OnRadar.
+              </p>
+            </div>
+            <span className="badge">
+              <span className="dot" style={{ background: sheet ? "var(--good)" : "var(--ink-muted)" }} />
+              {sheet ? "Connected" : "Not connected"}
+            </span>
+          </div>
+          {sheet && (
+            <div className="small secondary stack" style={{ gap: 4, marginBottom: 14 }}>
+              <div>
+                <b>“{sheet.name}”</b> · last update{" "}
+                {new Date(sheet.syncedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: client.timeZone })} ·{" "}
+                {sheet.rows.length.toLocaleString("en-US")} rows from {sheet.tabs.map((t) => `“${t}”`).join(", ")}
+                {sheet.url && <> · <a href={sheet.url} target="_blank" rel="noreferrer">Open sheet ↗</a></>}
+              </div>
+              <div>Numbers it supplies: {sheet.metrics.map((m) => METRIC_LABEL[m]).join(", ")}{sheet.hasAgent ? " · by agent" : ""}{sheet.hasSource ? " · by source" : ""}</div>
+              {sheet.ignoredColumns.length > 0 && <div>Columns not used: {sheet.ignoredColumns.join(", ")}</div>}
+              {sheet.skipped.length > 0 && <div className="notice">Skipped {sheet.skipped.length} row{sheet.skipped.length === 1 ? "" : "s"}: {sheet.skipped.slice(0, 4).map((x) => `${x.tab} row ${x.row} (${x.reason})`).join("; ")}</div>}
+            </div>
+          )}
+          <h3 style={{ marginBottom: 6 }}>Set up (one time, about 5 minutes)</h3>
+          <ol className="small secondary" style={{ margin: "0 0 12px", paddingLeft: 18, display: "grid", gap: 4 }}>
+            <li>
+              Use your existing sheet, or download the <a href="/api/reports/template">template</a> and open it in Google Sheets (File → Import →
+              Upload). The first row holds the column names; the Month column can be <i>2026-09</i>, <i>Sep 2026</i> or a date.
+            </li>
+            <li>In the sheet: <b>Extensions → Apps Script</b>. Delete what&apos;s there, paste the script below and click <b>Save</b>.</li>
+            <li>Choose <b>setup</b> in the function menu and click <b>Run</b>. Approve the permissions (if Google says the app isn&apos;t verified: <b>Advanced</b> → <b>Go to project</b>).</li>
+            <li>Refresh this page: it shows the rows it found and any it couldn&apos;t read.</li>
+          </ol>
+          <label className="field">
+            Sheet script for {client.name}
+            <textarea readOnly rows={8} value={sheetScript(sheetUrl)} style={{ height: "auto", padding: 10, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12 }} />
+            <span className="hint">Contains this client&apos;s private key. The script only reads the sheet. Put a tab name in ONLY_TAB to read just that tab.</span>
+          </label>
+          <div className="row" style={{ marginTop: 8 }}>
+            <CopyButton text={sheetScript(sheetUrl)} />
+            <a className="btn sm" href="/api/reports/template">Download template</a>
+            {sheet && (
+              <form action={disconnectSheet}>
+                <input type="hidden" name="clientId" value={id} />
+                <button className="btn sm danger" type="submit">Disconnect sheet</button>
+              </form>
+            )}
+          </div>
+        </section>
+
+        {/* Client view */}
+        <section className="card" id="client-view">
+          <div className="card-head">
+            <div>
+              <h2>What the client sees</h2>
+              <p className="muted small">Untick tabs to keep the client&apos;s view simple. Overview always shows; you still see every tab as admin.</p>
+            </div>
+          </div>
+          <form action={saveClientTabs} className="stack" style={{ gap: 10 }}>
+            <input type="hidden" name="clientId" value={id} />
+            <div className="row" style={{ gap: 16 }}>
+              <label className="checkbox"><input type="checkbox" checked disabled readOnly /> Overview</label>
+              {HIDEABLE_TABS.map((t) => (
+                <label key={t.key} className="checkbox">
+                  <input type="checkbox" name="show" value={t.key} defaultChecked={!client.hiddenTabs?.includes(t.key)} /> {t.label}
+                </label>
+              ))}
+            </div>
+            <div><button className="btn primary" type="submit">Save client view</button></div>
+          </form>
+        </section>
+
         {/* Profile */}
         <section className="card" id="profile">
           <div className="card-head"><h2>Profile &amp; branding</h2></div>
@@ -194,7 +279,7 @@ export default async function ClientSettings({
         <section className="card" id="crm">
           <div className="card-head">
             <div>
-              <h2>CRM connection</h2>
+              <h2>CRM connection (GoHighLevel)</h2>
               <p className="muted small">
                 In the client&apos;s CRM sub-account go to Settings → Private Integrations → Create, and grant read access to
                 Contacts, Conversations, Opportunities, Calendars, Calendar Events and Locations.

@@ -5,17 +5,19 @@ import { ClientTabs } from "@/components/ClientTabs";
 import { TrendsView } from "@/components/TrendsView";
 import { requireUser } from "@/lib/auth";
 import { getClient } from "@/lib/store";
+import { tabHidden } from "@/lib/tabs";
 
 export default async function ClientTrendsPage() {
   const user = await requireUser();
   if (user.role === "admin") redirect("/admin");
   const client = user.clientId ? await getClient(user.clientId) : null;
   if (!client) redirect("/dashboard");
+  if (tabHidden(client, "trends")) redirect("/dashboard");
   return (
     <AppShell user={user} client={client} active="dashboard">
       <div className="stack">
         <ClientHeader client={client} subtitle="Production, appointments and targets by year" />
-        <ClientTabs base="/dashboard" active="trends" />
+        <ClientTabs base="/dashboard" active="trends" hidden={client.hiddenTabs} />
         <TrendsView client={client} />
       </div>
     </AppShell>

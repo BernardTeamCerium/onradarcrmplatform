@@ -18,7 +18,7 @@ export interface PendingCard {
 }
 
 const short = (v: number) =>
-  v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M` : v >= 1_000 ? `$${Math.round(v / 1_000)}K` : `$${Math.round(v)}`;
+  v >= 1_000_000 ? `$${Number((v / 1_000_000).toFixed(2))}M` : v >= 1_000 ? `$${Math.round(v / 1_000)}K` : `$${Math.round(v)}`;
 const full = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
 
 /** Pending business by stage. Drag a card to another column (or use its menu) to move it. */

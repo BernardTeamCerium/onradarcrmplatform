@@ -1,9 +1,21 @@
 import Link from "next/link";
 
 /** Section tabs for one client. `base` is the dashboard URL (/dashboard or /admin/clients/<id>). */
-export function ClientTabs({ base, active, admin }: { base: string; active: "dashboard" | "engine" | "calendar" | "marketing" | "geo" | "leads" | "production" | "pipeline" | "trends" | "settings"; admin?: boolean }) {
+export function ClientTabs({
+  base,
+  active,
+  admin,
+  hidden,
+}: {
+  base: string;
+  active: "dashboard" | "reports" | "engine" | "calendar" | "marketing" | "geo" | "leads" | "production" | "pipeline" | "trends" | "settings";
+  admin?: boolean;
+  /** Tabs the admin has hidden from this client (ignored for admins). */
+  hidden?: string[];
+}) {
   const tabs = [
-    { key: "dashboard", label: "Dashboard", href: base },
+    { key: "dashboard", label: "Overview", href: base },
+    { key: "reports", label: "Reports", href: `${base}/reports` },
     { key: "engine", label: "Engine", href: `${base}/engine` },
     { key: "calendar", label: "Calendar", href: `${base}/calendar` },
     // Marketing and Geo are for OnRadar admins only.
@@ -19,9 +31,10 @@ export function ClientTabs({ base, active, admin }: { base: string; active: "das
     { key: "trends", label: "Trends", href: `${base}/trends` },
     ...(admin ? [{ key: "settings", label: "Settings", href: `${base}/settings` }] : []),
   ];
+  const shown = admin ? tabs : tabs.filter((t) => !hidden?.includes(t.key));
   return (
     <nav className="tabs" aria-label="Client sections">
-      {tabs.map((t) => (
+      {shown.map((t) => (
         <Link key={t.key} href={t.href} aria-current={t.key === active ? "page" : undefined}>
           {t.label}
         </Link>

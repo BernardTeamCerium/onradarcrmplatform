@@ -46,7 +46,9 @@ export async function ClientDashboard({
         client={client}
         subtitle={`${range.label} · ${shortDate(range.start.toISOString().slice(0, 10))} – ${shortDate(lastDay)}`}
       >
-        {data.source === "ghl" ? (
+        {data.sheet ? (
+          <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live from reporting sheet</span>
+        ) : data.source === "ghl" ? (
           <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live from OnRadar CRM</span>
         ) : data.source === "own" ? (
           <span className="badge"><span className="dot" style={{ background: "var(--good)" }} />Live</span>
@@ -55,7 +57,7 @@ export async function ClientDashboard({
         )}
       </ClientHeader>
 
-      <ClientTabs base={adminView ? `/admin/clients/${client.id}` : "/dashboard"} active="dashboard" admin={adminView} />
+      <ClientTabs base={adminView ? `/admin/clients/${client.id}` : "/dashboard"} active="dashboard" admin={adminView} hidden={client.hiddenTabs} />
 
       <RangePicker basePath={basePath} active={range.key} />
 
@@ -112,6 +114,7 @@ export async function ClientDashboard({
       </div>
 
       <p className="muted small">
+        {data.sheet ? `Numbers from your reporting sheet “${data.sheet.name}” (updated ${new Date(data.sheet.syncedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: client.timeZone })}). Other numbers: ` : ""}
         {data.source === "ghl"
           ? "Live from OnRadar CRM"
           : data.source === "own"

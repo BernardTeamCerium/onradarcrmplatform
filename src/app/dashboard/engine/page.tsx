@@ -6,6 +6,7 @@ import { EngineView } from "@/components/EngineView";
 import { requireUser } from "@/lib/auth";
 import { resolveRange } from "@/lib/ranges";
 import { getClient } from "@/lib/store";
+import { tabHidden } from "@/lib/tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,12 @@ export default async function ClientEnginePage({ searchParams }: { searchParams:
   if (user.role === "admin") redirect("/admin");
   const client = user.clientId ? await getClient(user.clientId) : null;
   if (!client) redirect("/dashboard");
+  if (tabHidden(client, "engine")) redirect("/dashboard");
   return (
     <AppShell user={user} client={client} active="dashboard">
       <div className="stack">
         <ClientHeader client={client} subtitle="Outreach activity: texts, emails, calls and conversations" />
-        <ClientTabs base="/dashboard" active="engine" />
+        <ClientTabs base="/dashboard" active="engine" hidden={client.hiddenTabs} />
         <EngineView client={client} range={resolveRange((await searchParams).range)} basePath="/dashboard/engine" />
       </div>
     </AppShell>

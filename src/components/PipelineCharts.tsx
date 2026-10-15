@@ -7,7 +7,7 @@ export const OUTCOME_COLOR: Record<Outcome, string> = { open: "var(--series-1)",
 export const OUTCOME_LABEL: Record<Outcome, string> = { open: "Open", won: "Won (paid)", lost: "Lost" };
 
 function short(v: number) {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(v >= 10_000_000 ? 1 : 2).replace(/\.?0+$/, "")}M`;
+  if (v >= 1_000_000) return `$${Number((v / 1_000_000).toFixed(v >= 10_000_000 ? 1 : 2))}M`;
   if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
   return `$${Math.round(v)}`;
 }

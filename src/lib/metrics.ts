@@ -5,6 +5,8 @@ import { liveBySource, matchSource, sampleBySource } from "./sources";
 import { hasProduction, loadProduction, submittedInRange } from "./production";
 import { cleanPlace, liveByGeo, sampleByGeo, type GeoFact } from "./geo";
 import { listLeads } from "./leads";
+import { groupTotals, loadSheet, totalsIn } from "./sheet";
+import type { ReportSheet, SourceRow } from "./types";
 import type { Client, DailyPoint, DashboardData, Lead, LeadStatus, Metrics } from "./types";
 
 const CACHE_TTL_MS = 5 * 60_000;
@@ -26,7 +28,9 @@ export function clearMetricsCache(clientId: string) {
 export async function getDashboardData(client: Client, range: DateRange): Promise<DashboardData> {
   const live = usesLiveData(client);
   const mode = live ? "ghl" : client.demoMode ? "demo" : "own";
-  const key = `${client.id}:${mode}:${range.start.toISOString()}:${range.end.toISOString()}`;
+  // The sheet's sync time is part of the key, so an edited sheet shows right away on every server.
+  const sheet = await loadSheet(client.id);
+  const key = `${client.id}:${mode}:${sheet?.syncedAt ?? "-"}:${range.start.toISOString()}:${range.end.toISOString()}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
 
@@ -38,10 +42,11 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
       // Never cache a failure; surface it on the dashboard instead of crashing the page.
       console.error(`Live data failed for ${client.id}:`, err);
       const own = await ownData(client, range);
-      return withProductionPremium(client, range, {
+      const fallback = await withProductionPremium(client, range, {
         ...own,
         warnings: ["The CRM is temporarily unavailable, so these numbers come from OnRadar's Leads tab only. Please check back shortly."],
       });
+      return sheet ? withSheet(client, sheet, range, fallback) : fallback;
     }
   } else if (!client.demoMode) {
     data = await ownData(client, range);
@@ -49,8 +54,77 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
     data = demoData(client, range);
   }
   data = await withProductionPremium(client, range, data);
+  if (sheet) data = withSheet(client, sheet, range, data);
   cache.set(key, { at: Date.now(), data });
   return data;
+}
+
+/**
+ * The reporting Google Sheet wins for every number it has a column for (spend, leads, appointments, premium…);
+ * anything it doesn't cover still comes from the CRM, Leads tab, production log or sample data.
+ */
+function withSheet(client: Client, sheet: ReportSheet, range: DateRange, data: DashboardData): DashboardData {
+  const has = new Set(sheet.metrics);
+  if (has.size === 0) return data;
+  const prev = previousRange(range);
+  const apply = (m: Metrics, r: { start: Date; end: Date }): Metrics => {
+    const t = totalsIn(sheet.rows, r.start, r.end);
+    const pick = (metric: (typeof sheet.metrics)[number], fallback: number) => (has.has(metric) ? Math.round((t[metric] ?? 0) * 100) / 100 : fallback);
+    const applicants = pick("applications", m.applicants);
+    return derive({
+      spend: pick("spend", m.spend),
+      leads: pick("leads", m.leads),
+      conversations: pick("conversations", m.conversations),
+      apptsSet: pick("apptsSet", m.apptsSet),
+      appointments: pick("connected", m.appointments),
+      applicants,
+      sales: pick("sales", m.sales),
+      premium: pick("submitted", m.premium),
+      // Keep the average cycle time when the sheet supplies the application count.
+      cycleDaysSum: (m.cycleDays ?? 0) * applicants,
+    });
+  };
+  const DAY = 86_400_000;
+  const daily = has.has("leads") || has.has("connected") || has.has("spend")
+    ? data.daily.map((d) => {
+        const t = totalsIn(sheet.rows, new Date(`${d.date}T00:00:00Z`), new Date(Date.parse(`${d.date}T00:00:00Z`) + DAY));
+        return {
+          date: d.date,
+          leads: has.has("leads") ? t.leads ?? 0 : d.leads,
+          appointments: has.has("connected") ? t.connected ?? 0 : d.appointments,
+          spend: has.has("spend") ? t.spend ?? 0 : d.spend,
+        };
+      })
+    : data.daily;
+  let bySource = data.bySource;
+  if (sheet.hasSource) {
+    const groups = groupTotals(sheet.rows, (r) => r.source, range.start, range.end);
+    const old = new Map(data.bySource.map((x) => [x.source, x]));
+    bySource = [...groups.entries()].map(([source, t]): SourceRow => {
+      const o = old.get(source);
+      const v = (metric: (typeof sheet.metrics)[number], fallback = 0) => (has.has(metric) ? Math.round(t[metric] ?? 0) : fallback);
+      return {
+        source,
+        spend: v("spend", o?.spend ?? 0),
+        leads: v("leads", o?.leads ?? 0),
+        conversations: v("conversations", o?.conversations ?? 0),
+        apptsSet: v("apptsSet", o?.apptsSet ?? 0),
+        connected: v("connected", o?.connected ?? 0),
+        applicants: v("applications", o?.applicants ?? 0),
+        sales: v("sales", o?.sales ?? 0),
+        premium: v("submitted", o?.premium ?? 0),
+        cycleDaysSum: o?.cycleDaysSum ?? 0,
+      };
+    });
+  }
+  return {
+    ...data,
+    metrics: apply(data.metrics, range),
+    previous: apply(data.previous, prev),
+    daily,
+    bySource,
+    sheet: { name: sheet.name, url: sheet.url, syncedAt: sheet.syncedAt, metrics: sheet.metrics },
+  };
 }
 
 /** When the team logs production, submitted premium comes from that log instead of the CRM or sample data. */

@@ -1,5 +1,6 @@
 import { count, moneyShort, percent, signedPercent } from "@/lib/format";
 import { loadProduction, mergeYearly } from "@/lib/production";
+import { loadSheet, mergeSheetYears } from "@/lib/sheet";
 import { buildYears, gapsToTarget, type Gap, type YearView } from "@/lib/trends";
 import type { Client } from "@/lib/types";
 import { YearBars } from "./YearBars";
@@ -85,8 +86,10 @@ function GapLine({ gap, lowerIsBetter }: { gap: Gap; lowerIsBetter?: boolean }) 
 export async function TrendsView({ client }: { client: Client }) {
   const production = await loadProduction(client);
   const merged = mergeYearly(client.yearly, production);
+  const sheet = await loadSheet(client.id);
+  const withSheet = mergeSheetYears(merged.years, sheet);
   // Growth needs the year before, so build from all years, then show the most recent three.
-  const years = buildYears(merged.years).slice(-3);
+  const years = buildYears(withSheet.years).slice(-3);
   if (years.length === 0) {
     return (
       <section className="card">
@@ -172,7 +175,9 @@ export async function TrendsView({ client }: { client: Client }) {
         <div style={{ padding: "20px 20px 0" }}>
           <h2>Growth and targets</h2>
           <p className="muted small">
-            {merged.fromLog.size > 0 ? "Submitted, paid and chargebacks come from the Production tab. " : ""}
+            {withSheet.fromSheet.size > 0
+              ? `Years in your reporting sheet (${[...withSheet.fromSheet].sort().join(", ")}) use its numbers. `
+              : merged.fromLog.size > 0 ? "Submitted, paid and chargebacks come from the Production tab. " : ""}
             Growth compares each year with the one before.{current.ytd ? ` ${current.year} is compared on its full-year pace (${pctElapsed}% of the year so far).` : ""}
           </p>
         </div>

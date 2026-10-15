@@ -112,6 +112,8 @@ export interface Client {
   /** Typeform API access for importing past responses. */
   /** Stages of the pending-business board, in order (defaults to DEFAULT_STAGES). */
   pipelineStages?: string[];
+  /** Tabs hidden from the client's own logins (admins still see everything). */
+  hiddenTabs?: string[];
   /** Monday.com deals board (past and current prospects) shown on the Pipeline tab. */
   monday?: MondayConfig;
   typeformApi?: { token: string; formIds: string[]; region: "us" | "eu"; lastImportAt?: string; lastResult?: string };
@@ -180,6 +182,8 @@ export interface DashboardData {
   source: "ghl" | "own" | "demo";
   fetchedAt: string;
   warnings: string[];
+  /** Set when numbers come from the client's reporting Google Sheet (which metrics it supplied). */
+  sheet?: { name: string; url?: string; syncedAt: string; metrics: ReportMetric[] };
 }
 
 export const LEAD_STATUSES = [
@@ -462,4 +466,32 @@ export interface MondaySnapshot {
   /** Stage labels in the board's order. */
   stages: string[];
   items: MondayItem[];
+}
+
+/** Numbers a reporting sheet can supply. */
+export const REPORT_METRICS = ["spend", "leads", "conversations", "apptsSet", "connected", "applications", "sales", "submitted", "paid", "chargebacks"] as const;
+export type ReportMetric = (typeof REPORT_METRICS)[number];
+
+/** One row of the reporting sheet: a day, month or year, optionally for one agent and/or source. */
+export interface ReportRow {
+  /** "YYYY", "YYYY-MM" or "YYYY-MM-DD". */
+  period: string;
+  agent?: string;
+  source?: string;
+  values: Partial<Record<ReportMetric, number>>;
+}
+
+export interface ReportSheet {
+  syncedAt: string;
+  name: string;
+  url?: string;
+  /** Tabs the rows were read from. */
+  tabs: string[];
+  /** Metrics that have a column in the sheet (the sheet is the source of truth for these). */
+  metrics: ReportMetric[];
+  hasAgent: boolean;
+  hasSource: boolean;
+  rows: ReportRow[];
+  skipped: { tab: string; row: number; reason: string }[];
+  ignoredColumns: string[];
 }

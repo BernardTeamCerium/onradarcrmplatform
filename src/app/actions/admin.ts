@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { getLocation } from "@/lib/ghl";
 import { fetchIcs, googleAddressProblem } from "@/lib/ics";
+import { deleteSheet, loadSheet } from "@/lib/sheet";
+import { HIDEABLE_TABS } from "@/lib/tabs";
 import { withBooked } from "@/lib/appointments";
 import { removeSampleLeads } from "@/lib/leads";
 import { clearMetricsCache } from "@/lib/metrics";
@@ -444,4 +446,25 @@ export async function savePipelineStages(form: FormData) {
   }
   await mutateClient(id, (c) => (c.pipelineStages = stages.slice(0, 20)));
   redirect(settingsPath(id, "Pipeline stages saved.") + "#stages");
+}
+
+/** Which tabs the client's own logins see (Overview always shows; admins see everything). */
+export async function saveClientTabs(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  const shown = new Set(form.getAll("show").map(String));
+  await mutateClient(id, (c) => {
+    const hidden = HIDEABLE_TABS.map((t) => t.key).filter((k) => !shown.has(k));
+    c.hiddenTabs = hidden.length ? hidden : undefined;
+  });
+  redirect(settingsPath(id, "Client view saved.") + "#client-view");
+}
+
+export async function disconnectSheet(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "clientId");
+  if (await loadSheet(id)) await deleteSheet(id);
+  clearMetricsCache(id);
+  revalidatePath("/", "layout");
+  redirect(settingsPath(id, "Reporting sheet disconnected. Its numbers no longer show (remove the script from the sheet too).") + "#sheet");
 }

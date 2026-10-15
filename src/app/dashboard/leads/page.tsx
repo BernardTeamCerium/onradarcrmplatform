@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { listBooked } from "@/lib/appointments";
 import { listLeads } from "@/lib/leads";
 import { getClient } from "@/lib/store";
+import { tabHidden } from "@/lib/tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,13 @@ export default async function ClientLeadsPage() {
   if (user.role === "admin") redirect("/admin");
   const client = user.clientId ? await getClient(user.clientId) : null;
   if (!client) redirect("/dashboard");
+  if (tabHidden(client, "leads")) redirect("/dashboard");
   const leads = (await listLeads(client.id)).slice(0, 300);
   return (
     <AppShell user={user} client={client} active="dashboard">
       <div className="stack">
         <ClientHeader client={client} subtitle="Every quiz lead, with their answers and where they stand" />
-        <ClientTabs base="/dashboard" active="leads" />
+        <ClientTabs base="/dashboard" active="leads" hidden={client.hiddenTabs} />
         <LeadsBoard clientId={client.id} initialLeads={leads} isAdmin={false} agents={client.agents} bookings={await listBooked(client.id)} calendarBase={"/dashboard/calendar"} />
       </div>
     </AppShell>
