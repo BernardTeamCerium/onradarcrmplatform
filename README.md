@@ -36,6 +36,13 @@ The summary then shows those numbers for the selected period, with:
 - **Paid per connected appt**
 - **Paid rate:** paid ÷ submitted
 
+**Importing a report:** under the monthly numbers, **Or import a spreadsheet** takes the production report as .xlsx or .csv.
+
+- Report layout: tabs named *Connected Appointments*, *Submitted Business*, *Paid Business*, *Chargebacks* (and optionally *Appointments*, *Pending*). Each tab has a block per year with months across and a row per agent; agent rows are added together, and Total/Grand Total rows and columns are skipped.
+- A Month-column list (like the reporting template) also works.
+- Every month in the file is filled in. Measures the file doesn't have keep what was already entered, and yearly chargebacks go to Trends.
+- Importing the same file again replaces the numbers rather than adding to them.
+
 **Comparisons:** this month is compared with last month, and year to date with the same months last year.
 
 **How the numbers are combined:**

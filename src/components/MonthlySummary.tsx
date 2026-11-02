@@ -4,6 +4,7 @@ import { previousRange, type DateRange } from "@/lib/ranges";
 import { totalsIn, type Totals } from "@/lib/sheet";
 import type { Client } from "@/lib/types";
 import { MonthlyForm } from "./MonthlyForm";
+import { importMonthlyFile } from "@/app/actions/monthly";
 
 const monthName = (d: Date) => d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
 
@@ -98,6 +99,20 @@ export async function MonthlySummary({ client, range, returnTo, msg }: { client:
         <summary style={{ cursor: "pointer", fontWeight: 600 }}>Enter or update monthly numbers</summary>
         <div style={{ marginTop: 12 }}>
           <MonthlyForm clientId={client.id} returnTo={returnTo} months={months} entries={entered} />
+          <form action={importMonthlyFile} className="stack" style={{ gap: 8, marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--grid)" }}>
+            <h3 style={{ margin: 0 }}>Or import a spreadsheet</h3>
+            <p className="small secondary" style={{ margin: 0 }}>
+              Upload the production report (.xlsx or .csv): tabs like <i>Connected Appointments</i>, <i>Submitted Business</i>, <i>Paid
+              Business</i> and <i>Chargebacks</i>, with a block per year and months across. Every month in the file is filled in at once;
+              numbers already entered for measures the file doesn&apos;t have are kept.
+            </p>
+            <input type="hidden" name="clientId" value={client.id} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <div className="row">
+              <input type="file" name="file" accept=".xlsx,.csv" required style={{ maxWidth: 360 }} />
+              <button className="btn primary" type="submit">Import</button>
+            </div>
+          </form>
         </div>
       </details>
     </section>
