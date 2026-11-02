@@ -18,15 +18,16 @@ export const METRIC_LABEL: Record<ReportMetric, string> = {
   spend: "Marketing spend",
   leads: "Leads",
   conversations: "Conversations",
-  apptsSet: "Appts set",
+  apptsSet: "Appointments",
   connected: "Connected appts",
   applications: "Applications",
   sales: "Sales",
-  submitted: "Submitted premium",
-  paid: "Paid premium",
+  submitted: "Submitted business",
+  paid: "Paid business",
+  pending: "Pending submits",
   chargebacks: "Chargebacks",
 };
-export const MONEY_METRICS: ReportMetric[] = ["spend", "submitted", "paid", "chargebacks"];
+export const MONEY_METRICS: ReportMetric[] = ["spend", "submitted", "paid", "pending", "chargebacks"];
 
 /** The template's columns, in order. */
 export const TEMPLATE_HEADERS = ["Month", "Agent", "Source", ...REPORT_METRICS.map((m) => METRIC_LABEL[m])];
@@ -46,6 +47,7 @@ const ALIASES: [Col, string[]][] = [
   ["sales", ["sales", "closed", "policies sold", "sold", "closes", "deals closed"]],
   ["submitted", ["submitted premium", "premium submitted", "submitted", "premium", "submitted production"]],
   ["paid", ["paid premium", "paid", "issued premium", "paid production", "placed premium"]],
+  ["pending", ["pending submits", "pending submit", "pending", "pending business", "pending premium", "pending submissions"]],
   ["chargebacks", ["chargebacks", "chargeback", "charge backs", "chargeback premium"]],
 ];
 const colFor = (header: string): Col | undefined => {
@@ -173,28 +175,49 @@ export function rowShare(period: string, start: Date, end: Date, now = new Date(
 
 export type Totals = Partial<Record<ReportMetric, number>>;
 
-export function totalsIn(rows: ReportRow[], start: Date, end: Date, filter?: (r: ReportRow) => boolean, now = new Date()): Totals {
+/** Metrics that are a snapshot at month end, not a running count: a range shows its latest month instead of a sum. */
+export const SNAPSHOT_METRICS: ReportMetric[] = ["pending"];
+
+function accumulate(rows: ReportRow[], start: Date, end: Date, now: Date): Totals {
   const out: Totals = {};
+  let latest = "";
   for (const r of rows) {
-    if (filter && !filter(r)) continue;
     const f = rowShare(r.period, start, end, now);
     if (f <= 0) continue;
-    for (const [m, v] of Object.entries(r.values) as [ReportMetric, number][]) out[m] = (out[m] ?? 0) + v * f;
+    for (const [m, v] of Object.entries(r.values) as [ReportMetric, number][]) {
+      if (SNAPSHOT_METRICS.includes(m)) {
+        if (r.period > latest) latest = r.period;
+        continue;
+      }
+      out[m] = (out[m] ?? 0) + v * f;
+    }
+  }
+  if (latest) {
+    for (const m of SNAPSHOT_METRICS) {
+      const at = rows.filter((r) => r.period === latest && r.values[m] !== undefined);
+      if (at.length) out[m] = at.reduce((a, r) => a + r.values[m]!, 0);
+    }
   }
   return out;
 }
 
+export function totalsIn(rows: ReportRow[], start: Date, end: Date, filter?: (r: ReportRow) => boolean, now = new Date()): Totals {
+  return accumulate(filter ? rows.filter(filter) : rows, start, end, now);
+}
+
 /** Totals grouped by a key (agent, source or month) within [start, end). */
 export function groupTotals(rows: ReportRow[], by: (r: ReportRow) => string | undefined, start: Date, end: Date, now = new Date()) {
-  const groups = new Map<string, Totals>();
+  const keyed = new Map<string, ReportRow[]>();
   for (const r of rows) {
     const k = by(r);
     if (!k) continue;
-    const f = rowShare(r.period, start, end, now);
-    if (f <= 0) continue;
-    const g = groups.get(k) ?? {};
-    for (const [m, v] of Object.entries(r.values) as [ReportMetric, number][]) g[m] = (g[m] ?? 0) + v * f;
-    groups.set(k, g);
+    if (!keyed.has(k)) keyed.set(k, []);
+    keyed.get(k)!.push(r);
+  }
+  const groups = new Map<string, Totals>();
+  for (const [k, rs] of keyed) {
+    const t = accumulate(rs, start, end, now);
+    if (Object.keys(t).length) groups.set(k, t);
   }
   return groups;
 }

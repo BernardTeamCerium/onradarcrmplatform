@@ -11,19 +11,20 @@ export default async function AdminClientDashboard({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; msg?: string }>;
 }) {
   const user = await requireAdmin();
   const { id } = await params;
   const client = await getClient(id);
   if (!client) notFound();
+  const sp = await searchParams;
   return (
     <AppShell user={user} active="overview">
       <p className="small" style={{ marginBottom: 12 }}>
         <Link href="/admin" className="muted">← All clients</Link>
         <span className="muted"> · Viewing exactly what {client.name} sees</span>
       </p>
-      <ClientDashboard client={client} range={resolveRange((await searchParams).range)} basePath={`/admin/clients/${id}`} adminView />
+      <ClientDashboard client={client} range={resolveRange(sp.range)} basePath={`/admin/clients/${id}`} adminView msg={sp.msg} />
     </AppShell>
   );
 }

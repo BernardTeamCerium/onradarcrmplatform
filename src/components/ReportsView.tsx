@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { count, money, moneyShort, percent } from "@/lib/format";
 import { demoRows } from "@/lib/metrics";
-import { loadSheet, METRIC_LABEL, MONEY_METRICS, sheetYears, totalsIn, type Totals } from "@/lib/sheet";
+import { loadReporting } from "@/lib/monthly";
+import { METRIC_LABEL, MONEY_METRICS, sheetYears, totalsIn, type Totals } from "@/lib/sheet";
 import { type Client, type ReportMetric, type ReportRow, type ReportSheet } from "@/lib/types";
 import { ReportChart } from "./ReportChart";
 
@@ -53,15 +54,15 @@ export async function ReportsView({
   search: { year?: string; agent?: string; source?: string };
   admin?: boolean;
 }) {
-  const stored = await loadSheet(client.id);
+  const stored = await loadReporting(client.id);
   const sheet = stored ?? (client.demoMode ? sampleSheet(client) : null);
   if (!sheet || sheet.rows.length === 0) {
     return (
       <section className="card">
         <h2>Reports</h2>
         <p className="secondary">
-          Month-by-month numbers appear here once the reporting Google Sheet is connected. Every edit to the sheet updates this page and the
-          Overview automatically.
+          Month-by-month numbers appear here once the team enters this month&apos;s numbers on the Overview (or a reporting Google Sheet is
+          connected).
         </p>
         {admin ? (
           <Link className="btn primary" href={`/admin/clients/${client.id}/settings#sheet`}>Connect the reporting sheet</Link>

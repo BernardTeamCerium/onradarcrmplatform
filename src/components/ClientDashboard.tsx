@@ -6,6 +6,7 @@ import { ClientHeader } from "./ClientHeader";
 import { ClientTabs } from "./ClientTabs";
 import { Funnel } from "./Funnel";
 import { KpiGrid } from "./KpiGrid";
+import { MonthlySummary } from "./MonthlySummary";
 import { RangePicker } from "./RangePicker";
 import { TrendChart, type TrendPoint } from "./TrendChart";
 
@@ -30,11 +31,13 @@ export async function ClientDashboard({
   range,
   basePath,
   adminView = false,
+  msg,
 }: {
   client: Client;
   range: DateRange;
   basePath: string;
   adminView?: boolean;
+  msg?: string;
 }) {
   const data = await getDashboardData(client, range);
   const trend = toTrend(data.daily);
@@ -64,6 +67,8 @@ export async function ClientDashboard({
       {data.warnings.map((w) => (
         <p key={w} className="notice">{w}</p>
       ))}
+
+      <MonthlySummary client={client} range={range} returnTo={`${basePath}?range=${range.key}`} msg={msg} />
 
       <KpiGrid metrics={data.metrics} previous={data.previous} agent={client.primaryAgent} />
 

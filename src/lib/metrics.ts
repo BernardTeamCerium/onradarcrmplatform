@@ -5,7 +5,8 @@ import { liveBySource, matchSource, sampleBySource } from "./sources";
 import { hasProduction, loadProduction, submittedInRange } from "./production";
 import { cleanPlace, liveByGeo, sampleByGeo, type GeoFact } from "./geo";
 import { listLeads } from "./leads";
-import { groupTotals, loadSheet, totalsIn } from "./sheet";
+import { loadReporting } from "./monthly";
+import { groupTotals, totalsIn } from "./sheet";
 import type { ReportSheet, SourceRow } from "./types";
 import type { Client, DailyPoint, DashboardData, Lead, LeadStatus, Metrics } from "./types";
 
@@ -29,7 +30,7 @@ export async function getDashboardData(client: Client, range: DateRange): Promis
   const live = usesLiveData(client);
   const mode = live ? "ghl" : client.demoMode ? "demo" : "own";
   // The sheet's sync time is part of the key, so an edited sheet shows right away on every server.
-  const sheet = await loadSheet(client.id);
+  const sheet = await loadReporting(client.id);
   const key = `${client.id}:${mode}:${sheet?.syncedAt ?? "-"}:${range.start.toISOString()}:${range.end.toISOString()}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;

@@ -1,6 +1,7 @@
 import { count, moneyShort, percent, signedPercent } from "@/lib/format";
 import { loadProduction, mergeYearly } from "@/lib/production";
-import { loadSheet, mergeSheetYears } from "@/lib/sheet";
+import { loadReporting } from "@/lib/monthly";
+import { mergeSheetYears } from "@/lib/sheet";
 import { buildYears, gapsToTarget, type Gap, type YearView } from "@/lib/trends";
 import type { Client } from "@/lib/types";
 import { YearBars } from "./YearBars";
@@ -86,7 +87,7 @@ function GapLine({ gap, lowerIsBetter }: { gap: Gap; lowerIsBetter?: boolean }) 
 export async function TrendsView({ client }: { client: Client }) {
   const production = await loadProduction(client);
   const merged = mergeYearly(client.yearly, production);
-  const sheet = await loadSheet(client.id);
+  const sheet = await loadReporting(client.id);
   const withSheet = mergeSheetYears(merged.years, sheet);
   // Growth needs the year before, so build from all years, then show the most recent three.
   const years = buildYears(withSheet.years).slice(-3);
@@ -176,7 +177,7 @@ export async function TrendsView({ client }: { client: Client }) {
           <h2>Growth and targets</h2>
           <p className="muted small">
             {withSheet.fromSheet.size > 0
-              ? `Years in your reporting sheet (${[...withSheet.fromSheet].sort().join(", ")}) use its numbers. `
+              ? `Years with monthly numbers (${[...withSheet.fromSheet].sort().join(", ")}) use them. `
               : merged.fromLog.size > 0 ? "Submitted, paid and chargebacks come from the Production tab. " : ""}
             Growth compares each year with the one before.{current.ytd ? ` ${current.year} is compared on its full-year pace (${pctElapsed}% of the year so far).` : ""}
           </p>

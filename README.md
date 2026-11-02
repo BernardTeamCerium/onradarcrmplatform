@@ -19,6 +19,30 @@ A branded, login-protected dashboard that pulls each client's numbers from **GoH
 
 Every metric is compared with the previous period of the same length. Date ranges: last 7 / 30 / 90 days, month to date, last month and year to date.
 
+## Monthly results (entered by the team)
+
+The top of the **Overview** is **Monthly results**. Each month the team (any client login, or an admin) opens **Enter or update monthly numbers**, picks the month and types five numbers:
+
+- **Appointments**
+- **Connected appointments**
+- **Submitted business ($)**
+- **Paid business ($)**
+- **Pending submits ($)**
+
+The summary then shows those numbers for the selected period, with:
+
+- **Connected rate:** connected ÷ appointments
+- **Submitted per connected appt**
+- **Paid per connected appt**
+- **Paid rate:** paid ÷ submitted
+
+**Comparisons:** this month is compared with last month, and year to date with the same months last year.
+
+**How the numbers are combined:**
+- Pending submits is a month-end figure, so a longer period shows its latest month instead of adding months up.
+- Blank boxes mean "not entered yet". Clearing every box removes the month.
+- The numbers also feed **Reports** and **Trends**. For any month the team enters, their numbers win over the reporting sheet's.
+
 ## Reporting sheet (Google Sheets) → Overview, Reports, Trends
 
 Keep the numbers in one Google Sheet. Use one row per month (or per day), with any of these columns:

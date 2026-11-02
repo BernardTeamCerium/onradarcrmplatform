@@ -5,16 +5,16 @@ import { requireUser } from "@/lib/auth";
 import { resolveRange } from "@/lib/ranges";
 import { getClient } from "@/lib/store";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ range?: string; msg?: string }> }) {
   const user = await requireUser();
   if (user.role === "admin") redirect("/admin");
   const client = user.clientId ? await getClient(user.clientId) : null;
-  const { range } = await searchParams;
+  const { range, msg } = await searchParams;
 
   return (
     <AppShell user={user} client={client} active="dashboard">
       {client ? (
-        <ClientDashboard client={client} range={resolveRange(range)} basePath="/dashboard" />
+        <ClientDashboard client={client} range={resolveRange(range)} basePath="/dashboard" msg={msg} />
       ) : (
         <div className="card">
           <h2>Your account isn't linked to a client yet</h2>

@@ -469,7 +469,7 @@ export interface MondaySnapshot {
 }
 
 /** Numbers a reporting sheet can supply. */
-export const REPORT_METRICS = ["spend", "leads", "conversations", "apptsSet", "connected", "applications", "sales", "submitted", "paid", "chargebacks"] as const;
+export const REPORT_METRICS = ["spend", "leads", "conversations", "apptsSet", "connected", "applications", "sales", "submitted", "paid", "pending", "chargebacks"] as const;
 export type ReportMetric = (typeof REPORT_METRICS)[number];
 
 /** One row of the reporting sheet: a day, month or year, optionally for one agent and/or source. */
@@ -494,4 +494,16 @@ export interface ReportSheet {
   rows: ReportRow[];
   skipped: { tab: string; row: number; reason: string }[];
   ignoredColumns: string[];
+}
+
+/** The five numbers the team enters each month on the Overview. */
+export const MONTHLY_FIELDS = ["apptsSet", "connected", "submitted", "paid", "pending"] as const;
+export type MonthlyField = (typeof MONTHLY_FIELDS)[number];
+
+export interface MonthlyEntry {
+  /** YYYY-MM */
+  month: string;
+  values: Partial<Record<MonthlyField, number>>;
+  updatedAt: string;
+  updatedBy?: string;
 }
